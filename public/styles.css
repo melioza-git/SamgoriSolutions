@@ -488,3 +488,9 @@ section { scroll-margin-top: 16px; }
   body { background: #fff !important; }
   .job { break-inside: avoid; }
 }
+.prose { max-width: 760px; }
+.prose h2 { font-size: 1.6rem; font-weight: 300; margin: 40px 0 12px; }
+.prose h2:first-of-type { margin-top: 0; }
+.prose p, .prose li { font-weight: 300; margin-bottom: 12px; }
+.prose ul { padding-left: 22px; }
+.prose a { color: var(--cadet, inherit); }
