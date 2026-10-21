@@ -62,7 +62,7 @@
       <p class="eyebrow">Resume</p>
       <h2 id="rs-title">Maia Eliozashvili</h2>
       <p class="lede" style="margin-top:14px">NetSuite architect and consultancy principal, with over 20 years across ERP, CRM, integrations, reporting and AI enablement.</p>
-      <p class="hero-actions"><button class="btn" type="button" id="print-btn">Save or print as PDF</button></p>
+      <p class="hero-actions"><button class="submit" type="button" id="print-btn">Save or print as PDF</button></p>
       <p class="rs-contact" style="margin-top:32px">New York Metro Area &middot; maia.eliozashvili@samgorisolutions.com &middot; (973) 885-3115 &middot; linkedin.com/in/maiaeliozashvili</p>
 
       <section class="rs-sec"><h3 class="rs-h">Summary</h3>
@@ -173,11 +173,11 @@
 })();
 </script><script>
 (function () {
-  // Submissions go to the HubSpot form "Website Contact Form", which creates a contact in HubSpot
-  // and emails a notification to maia.eliozashvili@samgorisolutions.com.
-  var HUBSPOT_PORTAL_ID = "247756375";
-  var HUBSPOT_FORM_ID = "ecacda5f-02f4-4805-8615-08f1c8b91b54";
-  var FORM_ENDPOINT = "https://api.hsforms.com/submissions/v3/integration/submit/" + HUBSPOT_PORTAL_ID + "/" + HUBSPOT_FORM_ID;
+  // To send submissions as email, create a form at an email-forwarding service (for example Formspree, Basin or Web3Forms),
+  // set it to deliver to maia.eliozashvili@samgorisolutions.com, and paste its endpoint URL here.
+  // Services that need an access key (Web3Forms) can have it set in ACCESS_KEY.
+  var FORM_ENDPOINT = "";
+  var ACCESS_KEY = "";
   var TO = "maia.eliozashvili@samgorisolutions.com";
 
   var form = document.getElementById('contact-form');
@@ -229,20 +229,12 @@
     if (!validate()) return;
     if (form.elements.website.value) return; // honeypot
     if (!FORM_ENDPOINT) { fallback('Sending is not connected yet.'); return; }
-    var f = form.elements;
-    var parts = f.name.value.trim().split(/\s+/);
-    var fields = [{ name: 'firstname', value: parts.shift() }];
-    if (parts.length) fields.push({ name: 'lastname', value: parts.join(' ') });
-    fields.push({ name: 'email', value: f.email.value.trim() });
-    if (f.company.value.trim()) fields.push({ name: 'company', value: f.company.value.trim() });
-    fields.push({ name: 'message', value: [
-      f.message.value.trim(), '',
-      'NetSuite release: ' + (f.netsuite_release.value.trim() || 'not given'),
-      'Custom scripts: ' + (f.custom_scripts.value || 'not sure')
-    ].join('\n') });
-    var payload = { fields: fields, context: { pageUri: window.location.href, pageName: document.title } };
+    var data = new FormData(form);
+    data.delete('website');
+    if (ACCESS_KEY) data.append('access_key', ACCESS_KEY);
+    data.append('_subject', 'New inquiry from the Samgori Solutions website');
     btn.disabled = true; btn.textContent = 'Sending';
-    fetch(FORM_ENDPOINT, { method: 'POST', body: JSON.stringify(payload), headers: { 'Content-Type': 'application/json' } })
+    fetch(FORM_ENDPOINT, { method: 'POST', body: data, headers: { 'Accept': 'application/json' } })
       .then(function (r) { if (!r.ok) throw new Error('bad status'); return r; })
       .then(function () {
         form.reset();
