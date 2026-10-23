@@ -494,3 +494,10 @@ section { scroll-margin-top: 16px; }
 .prose p, .prose li { font-weight: 300; margin-bottom: 12px; }
 .prose ul { padding-left: 22px; }
 .prose a { color: var(--cadet, inherit); }
+
+/* Calendly booking card */
+.booking-card { padding: 28px 12px 12px; }
+.booking-card h3, .booking-card .sub { padding: 0 20px; }
+.booking-card .calendly-inline-widget { margin-top: -8px; }
+.contact-grid { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+@media (max-width: 900px) { .contact-grid { grid-template-columns: minmax(0, 1fr); } }
