@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Field Notes · Samgori Solutions</title>
+<meta name="description" content="Standards, tools and working notes from running NetSuite after go-live: integrations, SuiteScript 2.1 readiness, interface modernization and AI.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Jost:wght@300;400;500;600&family=Newsreader:ital,opsz,wght@0,6..72,300;0,6..72,400;1,6..72,300;1,6..72,400&display=swap" rel="stylesheet">
+<style>
+:root { --navy:#26405F; --bronze:#D7A667; --bronze-rule:#B8884A; --bronze-soft:#F1E6D6; --bronze-text:#7F5A2C; --azure:#B4C8D6; --azure-line:#CAD6DF; --azure-text:#2D4B6E; --teal:#356874;
+  --bg:#EEF0F0; --card:#fff; --fg:#16212E; --muted:#4A5668; --line:#CBD3D9; --font-body:'Jost',system-ui,-apple-system,'Segoe UI',sans-serif; --font-display:'Newsreader',Georgia,'Times New Roman',serif; }
+* { box-sizing:border-box; }
+body { margin:0; background:var(--bg); color:var(--fg); font:400 18px/1.6 var(--font-body); }
+a { color:var(--teal); }
+:focus-visible { outline:2px solid var(--teal); outline-offset:2px; }
+.wrap { max-width:1160px; margin:0 auto; padding-inline:20px; }
+.hero { background:var(--navy); color:#F4F2ED; padding:80px 0 72px; }
+.eyebrow { display:flex; align-items:center; gap:14px; font:500 11.84px var(--font-body); letter-spacing:.22em; text-transform:uppercase; color:var(--azure); }
+.eyebrow::before { content:""; width:32px; height:1px; background:var(--bronze); }
+.hero h1 { font:300 clamp(44px,7vw,80px)/1.02 var(--font-display); letter-spacing:-.026em; margin:20px 0 22px; }
+.hero h1 em { font-style:italic; color:var(--bronze); }
+.lede { font-weight:300; font-size:19px; color:#D5DBE2; max-width:60ch; margin:0; }
+.band { padding:56px 0 88px; }
+.bar { display:flex; flex-wrap:wrap; gap:12px 24px; align-items:center; justify-content:space-between; padding-bottom:18px; border-bottom:1px solid var(--line); }
+.bar h2 { font:300 28px/1.1 var(--font-display); letter-spacing:-.02em; margin:0; }
+.chips { display:flex; flex-wrap:wrap; gap:8px; }
+.chip { font:500 11.5px var(--font-body); letter-spacing:.14em; text-transform:uppercase; padding:7px 14px; border:1px solid var(--line); background:var(--card); color:var(--azure-text); border-radius:999px; cursor:pointer; }
+.chip:hover { border-color:var(--navy); }
+.chip[aria-pressed="true"] { background:var(--navy); color:#F4F2ED; border-color:var(--navy); }
+.note { display:grid; grid-template-columns:170px minmax(0,1fr) auto; gap:20px 36px; align-items:start; padding:32px 0 36px; border-bottom:1px solid var(--line); }
+.note[hidden] { display:none; }
+.note-meta { display:flex; flex-direction:column; gap:10px; align-items:flex-start; }
+.pill { font:500 10.5px var(--font-body); letter-spacing:.16em; text-transform:uppercase; padding:3px 11px; border:1px solid var(--azure-line); border-radius:999px; color:var(--azure-text); background:var(--card); }
+.date { font:400 14px var(--font-body); color:var(--muted); }
+.note h2 { font:400 clamp(24px,3vw,32px)/1.15 var(--font-display); letter-spacing:-.015em; margin:0 0 10px; }
+.note h2 a { color:var(--fg); text-decoration:none; }
+.note h2 a:hover { color:var(--teal); }
+.note p { margin:0; font-size:17px; color:var(--muted); max-width:62ch; }
+.tags { list-style:none; margin:14px 0 0; padding:0; display:flex; flex-wrap:wrap; gap:6px 18px; font:500 11px var(--font-body); letter-spacing:.16em; text-transform:uppercase; color:var(--bronze-text); }
+.read { font:500 12px var(--font-body); letter-spacing:.2em; text-transform:uppercase; color:var(--fg); text-decoration:none; border-bottom:1px solid var(--bronze); padding-bottom:3px; align-self:center; }
+.read:hover { color:var(--teal); }
+@media (max-width:760px) { .note { grid-template-columns:1fr; gap:12px; } .note-meta { flex-direction:row; align-items:center; gap:14px; } .read { justify-self:start; } .hero { padding:56px 0 48px; } }
+.soon { margin:36px 0 0; font-size:16px; color:var(--muted); }
+
+/* ===== Samgori site chrome (header, footer) ===== */
+.sg-header { background:#26405F; border-bottom:1px solid rgba(255,255,255,.14); position:sticky; top:0; z-index:100; }
+.sg-wrap { max-width:1160px; margin:0 auto; padding:18px 20px; display:flex; align-items:center; justify-content:space-between; gap:20px; }
+.sg-brand { display:block; line-height:0; }
+.sg-brand .logo-h { height:40px; width:auto; display:block; }
+.sg-nav { display:flex; align-items:center; gap:28px; flex-wrap:wrap; justify-content:flex-end; }
+.sg-nav a { font:500 11.84px/19px 'Jost',system-ui,sans-serif; letter-spacing:.2em; text-transform:uppercase; color:#D5DBE2; text-decoration:none; padding:7px 0 8px; border-bottom:1px solid transparent; }
+.sg-nav a:hover { color:#F4F2ED; }
+.sg-nav a[aria-current="page"] { color:#F4F2ED; border-bottom-color:#D7A667; }
+.sg-nav a.cta { color:#F4F2ED; border-bottom-color:#D7A667; }
+@media (max-width:900px) { .sg-wrap { flex-wrap:wrap; padding:14px 16px; } .sg-nav { gap:6px 18px; justify-content:flex-start; } .sg-brand .logo-h { height:34px; } }
+.sg-footer { background:#26405F; border-top:1px solid rgba(255,255,255,.14); color:#F4F2ED; margin-top:0; }
+.sg-footer .sg-wrap { align-items:flex-start; flex-direction:column; gap:14px; padding:40px 20px 44px; }
+.sg-footer .logo-h { height:38px; }
+.foot-rule { display:block; width:40px; height:1px; background:#D7A667; }
+.foot-nav { display:flex; flex-wrap:wrap; gap:6px 24px; }
+.foot-nav a { font:500 11.84px 'Jost',sans-serif; letter-spacing:.2em; text-transform:uppercase; color:#D5DBE2; text-decoration:none; }
+.foot-nav a:hover { color:#F4F2ED; }
+.sg-footer p { margin:0; font:300 14px/1.6 'Jost',sans-serif; color:#B9C5D3; max-width:72ch; }
+.sg-footer p a { color:#A7C6CB; }
+
+</style></head><body>
+<header class="sg-header"><div class="sg-wrap"><a class="sg-brand" href="/" aria-label="Samgori Solutions home"><svg class="logo-h" viewBox="0 0 430 80" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Samgori Solutions"><g transform="translate(0 8)"><defs><clipPath id="k1"><circle cx="32" cy="32" r="27"></circle></clipPath></defs><circle cx="32" cy="32" r="30.4" fill="none" stroke="#D7A667" stroke-width="2"></circle><g clip-path="url(#k1)"><path d="M0 40 C14 40 22 30 34 28 C46 26 54 34 64 36 V70 H0Z" fill="#456887" stroke="#26405F" stroke-width="1.5" stroke-linejoin="round"></path><path d="M0 44 C6 37 12 33 20 34 C32 36 38 47 50 47 C56 47 60 45 64 44 V70 H0Z" fill="#7F9DB8" stroke="#26405F" stroke-width="1.5" stroke-linejoin="round"></path><path d="M0 53 C14 53 22 47 36 47 C48 47 54 53 64 51 V70 H0Z" fill="#B4C8D6" stroke="#26405F" stroke-width="1.5" stroke-linejoin="round"></path><circle cx="44" cy="17" r="3.2" fill="#D7A667"></circle></g></g><text x="84" y="47" font-family="Jost,sans-serif" font-size="22" letter-spacing="6.5" fill="#F4F2ED"><tspan font-weight="500">SAMGORI</tspan><tspan font-weight="400" fill="#D7A667" dx="14">SOLUTIONS</tspan></text></svg></a><nav class="sg-nav" aria-label="Primary"><a href="/#why-now">Why now</a><a href="/#why-samgori">Why Samgori</a><a href="/services.html">Services</a><a href="/portfolio.html">Portfolio</a><a href="/field-notes/" aria-current="page">Field Notes</a><a href="/about.html">About</a><a class="cta" href="/about.html#contact">Contact Us</a></nav></div></header>
+<main>
+  <section class="hero"><div class="wrap">
+    <span class="eyebrow">Notes from running NetSuite after go-live</span>
+    <h1>Field <em>notes.</em></h1>
+    <p class="lede">Standards, tools and working notes on integrations, SuiteScript 2.1 readiness, interface modernization and AI for NetSuite. Written to be used, not just read.</p>
+  </div></section>
+  <section class="band"><div class="wrap">
+    <div class="bar"><h2>All notes</h2><div class="chips" id="chips" role="group" aria-label="Filter by type"></div></div>
+    <!-- To add a note: copy one <article class="note"> block below, change data-type, the pill, date, title, summary, tags and both links.
+         Newest first. Filter chips are built automatically from the data-type values. -->
+      <article class="note" data-type="Standard">
+        <div class="note-meta"><span class="pill">Standard</span><span class="date">October 2026</span></div>
+        <div class="note-body">
+          <h2><a href="integration-capacity-standard.html">Integration Capacity Standard</a></h2>
+          <p>How to size every NetSuite integration before it is built: how many records one call can safely handle, and how often the other system has to call to keep up. Includes a cost builder and calculator.</p>
+          <ul class="tags"><li>Integrations</li><li>Governance</li><li>Calculator</li></ul>
+        </div>
+        <a class="read" href="integration-capacity-standard.html">Read</a>
+      </article>
+    <p class="soon">More notes are on the way.</p>
+  </div></section>
+</main>
+<footer class="sg-footer"><div class="sg-wrap"><svg class="logo-h" viewBox="0 0 430 80" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Samgori Solutions"><g transform="translate(0 8)"><defs><clipPath id="k2"><circle cx="32" cy="32" r="27"></circle></clipPath></defs><circle cx="32" cy="32" r="30.4" fill="none" stroke="#D7A667" stroke-width="2"></circle><g clip-path="url(#k2)"><path d="M0 40 C14 40 22 30 34 28 C46 26 54 34 64 36 V70 H0Z" fill="#456887" stroke="#26405F" stroke-width="1.5" stroke-linejoin="round"></path><path d="M0 44 C6 37 12 33 20 34 C32 36 38 47 50 47 C56 47 60 45 64 44 V70 H0Z" fill="#7F9DB8" stroke="#26405F" stroke-width="1.5" stroke-linejoin="round"></path><path d="M0 53 C14 53 22 47 36 47 C48 47 54 53 64 51 V70 H0Z" fill="#B4C8D6" stroke="#26405F" stroke-width="1.5" stroke-linejoin="round"></path><circle cx="44" cy="17" r="3.2" fill="#D7A667"></circle></g></g><text x="84" y="47" font-family="Jost,sans-serif" font-size="22" letter-spacing="6.5" fill="#F4F2ED"><tspan font-weight="500">SAMGORI</tspan><tspan font-weight="400" fill="#D7A667" dx="14">SOLUTIONS</tspan></text></svg><span class="foot-rule" aria-hidden="true"></span><nav class="foot-nav" aria-label="Footer"><a href="/">Home</a><a href="/services.html">Services</a><a href="/portfolio.html">Portfolio</a><a href="/field-notes/">Field Notes</a><a href="/about.html">About</a><a href="/about.html#contact">Contact</a><a href="/privacy.html">Privacy</a></nav><p>© 2026 Samgori Solutions. An independent consultancy, not affiliated with Oracle. NetSuite is a registered trademark of Oracle Corporation.</p><p>New York Metro Area · <a href="https://www.linkedin.com/in/maiaeliozashvili" target="_blank" rel="noopener">linkedin.com/in/maiaeliozashvili</a></p></div></footer>
+<script>
+(function () {
+  var notes = Array.prototype.slice.call(document.querySelectorAll('.note'));
+  var types = []; notes.forEach(function (n) { var t = n.getAttribute('data-type'); if (types.indexOf(t) < 0) types.push(t); });
+  var box = document.getElementById('chips');
+  if (types.length < 2) { box.hidden = true; return; }
+  function show(t) {
+    notes.forEach(function (n) { n.hidden = !(t === 'All' || n.getAttribute('data-type') === t); });
+    Array.prototype.forEach.call(box.children, function (c) { c.setAttribute('aria-pressed', c.textContent === t ? 'true' : 'false'); });
+  }
+  ['All'].concat(types).forEach(function (t) {
+    var b = document.createElement('button'); b.type = 'button'; b.className = 'chip'; b.textContent = t; b.setAttribute('aria-pressed', t === 'All' ? 'true' : 'false');
+    b.addEventListener('click', function () { show(t); }); box.appendChild(b);
+  });
+})();
+</script>
+</body></html>

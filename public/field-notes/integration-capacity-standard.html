@@ -1,0 +1,968 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Integration Capacity Standard · Field Notes · Samgori Solutions</title><meta name="description" content="How to size every NetSuite integration before it is built: how many records one call can safely handle, and how often the other system has to call to keep up."><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Jost:wght@300;400;500;600&family=Newsreader:ital,opsz,wght@0,6..72,300;0,6..72,400;1,6..72,300;1,6..72,400&display=swap" rel="stylesheet">
+<style>
+/* Layout: charcoal header, deep-navy hero, then a sticky contents rail beside one reading column. */
+:root {
+  --cn-charcoal:#1C1C1A; --cn-navy:#0E3A4A; --cn-hero-bg:#0B2538; --cn-gold:#C8A951; --cn-gold-dark:#A8893A;
+  --cn-cyan:#06B6D4; --cn-cream:#F8F6F1; --cn-offwhite:#FFF6E0; --cn-navy-50:#E7F0F5; --cn-navy-900:#04232E;
+  --font-sans:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;
+  --font-mono:Consolas,Monaco,'Cascadia Mono',monospace;
+  --radius-sm:4px; --radius-md:8px;
+
+  --bg:#F8F6F1; --surface:#FCFBF8; --surface-2:#EFF3F2; --fg:#0E3A4A; --body:rgba(14,58,74,.86);
+  --muted:rgba(14,58,74,.62); --line:rgba(14,58,74,.15); --ghost:rgba(14,58,74,.06);
+  --gold:#C8A951; --gold-text:#8A6D22; --cyan-text:#0E7490; --cyan-fill:rgba(6,182,212,.12);
+  --th-bg:#0E3A4A; --th-fg:#F8F6F1; --code-bg:#1C1C1A; --code-fg:#F8F6F1;
+  --j-key:#9FD8E6; --j-str:#E8D9A8; --j-num:#7FD1C1; --j-bool:#F0B78E;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg:#161816; --surface:#1E2427; --surface-2:#1A2D35; --fg:#F8F6F1; --body:rgba(248,246,241,.84);
+  --muted:rgba(248,246,241,.58); --line:rgba(248,246,241,.13); --ghost:rgba(248,246,241,.05);
+  --gold-text:#D7BC6E; --cyan-text:#5FD7EA; --cyan-fill:rgba(6,182,212,.16);
+  --th-bg:#0E3A4A; --th-fg:#F8F6F1; --code-bg:#04232E; --code-fg:#F8F6F1; color-scheme:dark;
+} }
+:root[data-theme="dark"] {
+  --bg:#161816; --surface:#1E2427; --surface-2:#1A2D35; --fg:#F8F6F1; --body:rgba(248,246,241,.84);
+  --muted:rgba(248,246,241,.58); --line:rgba(248,246,241,.13); --ghost:rgba(248,246,241,.05);
+  --gold-text:#D7BC6E; --cyan-text:#5FD7EA; --cyan-fill:rgba(6,182,212,.16);
+  --th-bg:#0E3A4A; --th-fg:#F8F6F1; --code-bg:#04232E; --code-fg:#F8F6F1; color-scheme:dark;
+}
+* { box-sizing:border-box; }
+html { scroll-behavior:smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior:auto; } }
+body { background:var(--bg); color:var(--body); font-family:var(--font-sans); font-size:15px; line-height:1.65; }
+code, .code { font-family:var(--font-mono); }
+code { font-size:.86em; overflow-wrap:anywhere; }
+h1,h2,h3 { color:var(--fg); text-wrap:balance; margin:0; }
+p { margin:0; }
+a { color:var(--cyan-text); }
+:focus-visible { outline:2px solid var(--cn-cyan); outline-offset:2px; }
+
+/* header */
+.cn-header { background:var(--cn-charcoal); height:60px; display:flex; align-items:center; justify-content:space-between; gap:12px;
+  padding:0 24px; position:sticky; top:env(safe-area-inset-top,0px); z-index:100; }
+.cn-logo-group { display:flex; align-items:center; min-width:0; }
+.cn-logo-divider { width:1px; height:28px; background:rgba(248,246,241,.18); margin:0 16px; flex-shrink:0; }
+.cn-logo-tag { display:flex; align-items:baseline; white-space:nowrap; overflow:hidden; }
+.cn-logo-main { font-size:13px; font-weight:700; color:var(--cn-cream); letter-spacing:-.2px; }
+.cn-logo-sep { font-size:11px; color:rgba(248,246,241,.25); margin:0 7px; }
+.cn-logo-sub { font-size:11px; }
+.cn-logo-sub-muted { color:rgba(248,246,241,.38); }
+.cn-logo-oracle { color:#C74634; font-weight:700; }
+.cn-logo-net { color:var(--cn-cream); font-weight:800; }
+.cn-logo-suite { color:rgba(248,246,241,.75); font-weight:300; }
+.hdr-doc { display:flex; align-items:center; gap:8px; flex-shrink:0; }
+.hdr-doc .lbl { font-size:11px; font-weight:500; color:rgba(248,246,241,.6); letter-spacing:1.5px; text-transform:uppercase; }
+.ver-pill { font-size:11px; font-weight:700; color:var(--cn-charcoal); background:var(--cn-gold); border-radius:999px; padding:3px 10px; }
+@media (max-width:640px) { .cn-logo-sub, .cn-logo-sep, .hdr-doc .lbl { display:none; } .cn-header { padding:0 16px; } }
+
+/* hero */
+.hero { background:var(--cn-hero-bg); color:var(--cn-cream); position:relative; overflow:hidden; }
+.hero-in { max-width:1240px; margin:0 auto; padding:44px 24px 36px; display:grid; grid-template-columns:minmax(0,1fr) 200px; gap:32px; align-items:end; }
+.eyebrow { font-size:11px; font-weight:600; letter-spacing:3.2px; text-transform:uppercase; color:rgba(248,246,241,.55); }
+.hero h1 { color:var(--cn-cream); font-size:clamp(30px,4.4vw,46px); font-weight:800; letter-spacing:-1.4px; line-height:1.08; margin:10px 0 12px; }
+.hero h1 em { font-style:italic; font-weight:300; color:var(--cn-gold); letter-spacing:-.8px; }
+.hero .lede { max-width:62ch; color:rgba(248,246,241,.78); font-size:15.5px; }
+.meta { display:flex; flex-wrap:wrap; gap:10px 28px; margin-top:22px; padding-top:18px; border-top:1px solid rgba(248,246,241,.14); }
+.meta div { display:flex; flex-direction:column; gap:2px; }
+.meta dt { font-size:10px; letter-spacing:2.4px; text-transform:uppercase; color:rgba(248,246,241,.48); font-weight:600; }
+.meta dd { margin:0; font-size:13.5px; font-weight:600; color:var(--cn-cream); }
+.bonsai { width:200px; height:200px; opacity:.92; }
+.bonsai svg { display:block; }
+.changed { margin-top:16px; font-size:13px; color:rgba(248,246,241,.72); }
+.changed b { color:var(--cn-cream); font-weight:600; }
+@media (max-width:760px) { .hero-in { grid-template-columns:1fr; } .bonsai { position:absolute; right:-30px; top:10px; width:150px; height:150px; opacity:.18; } }
+
+/* layout */
+.wrap { max-width:1240px; margin:0 auto; padding-inline:24px; padding-block:32px 64px; display:grid; grid-template-columns:220px minmax(0,1fr); gap:44px; }
+.toc { position:sticky; top:calc(60px + env(safe-area-inset-top,0px) + 24px); align-self:start; max-height:calc(100vh - 110px); overflow:auto; }
+.toc .eyebrow { color:var(--muted); display:block; margin-bottom:10px; }
+.toc ol { list-style:none; margin:0; padding:0; border-left:1px solid var(--line); }
+.toc a { display:flex; gap:10px; padding:6px 0 6px 14px; margin-left:-1px; border-left:2px solid transparent; color:var(--muted); text-decoration:none; font-size:13.5px; line-height:1.35; }
+.toc a .n { font-variant-numeric:tabular-nums; min-width:16px; color:var(--muted); font-weight:500; }
+.toc a:hover { color:var(--fg); background:var(--ghost); }
+.toc a.on { color:var(--fg); border-left-color:var(--cn-cyan); font-weight:600; }
+.toc-ver { margin-top:18px; padding:12px 14px; border:1px solid var(--line); border-radius:var(--radius-md); font-size:12px; color:var(--muted); }
+.toc-ver ul { margin:6px 0 0; padding:0; list-style:none; }
+.ver { font-weight:700; color:var(--fg); margin-right:4px; }
+@media (max-width:900px) {
+  .wrap { grid-template-columns:minmax(0,1fr); gap:24px; padding-inline:16px; }
+  .toc { position:static; max-height:none; }
+  .toc ol { display:flex; flex-wrap:wrap; gap:4px 6px; border:0; }
+  .toc a { border:1px solid var(--line); border-radius:999px; padding:4px 12px; margin:0; font-size:12.5px; }
+  .toc a.on { border-color:var(--cn-cyan); }
+  .toc-ver { display:none; }
+}
+main { min-width:0; }
+section.ch { padding-top:8px; margin-bottom:56px; scroll-margin-top:84px; }
+.ch-head { display:flex; align-items:baseline; gap:14px; padding-bottom:12px; border-bottom:1px solid var(--line); margin-bottom:22px; }
+.ch-num { font-size:30px; font-weight:300; font-style:italic; color:var(--gold-text); line-height:1; font-variant-numeric:tabular-nums; min-width:34px; }
+.ch-head h2 { font-size:24px; font-weight:700; letter-spacing:-.5px; }
+.prose { max-width:70ch; display:grid; gap:12px; }
+h3.sub { font-size:16px; font-weight:600; margin:28px 0 10px; display:flex; flex-wrap:wrap; gap:4px 10px; align-items:baseline; }
+h3.sub:first-child { margin-top:0; }
+.rec { font-weight:400; font-size:12.5px; font-family:var(--font-mono); }
+.muted { color:var(--muted); }
+.small { font-size:12.5px; }
+.nowrap { white-space:nowrap; }
+
+/* cards */
+.cards { display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:14px; margin-top:16px; }
+.card { background:var(--surface); border:1px solid var(--line); border-top:3px solid var(--cn-navy); border-radius:var(--radius-md); padding:16px 18px; display:grid; gap:8px; align-content:start; }
+.card.sor { border-top-color:var(--cn-cyan); }
+.card-label { font-size:10px; font-weight:600; text-transform:uppercase; letter-spacing:2.4px; color:var(--muted); }
+.card h3 { font-size:17px; }
+.card p, .card li { font-size:13.5px; }
+.card ul { margin:0; padding-left:18px; }
+.gn { display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); gap:14px; }
+.gn ul { margin:0; padding-left:18px; display:grid; gap:6px; }
+
+/* runtime view */
+.legs { list-style:none; margin:0 0 26px; padding:0; border:1px solid var(--line); border-radius:var(--radius-md); background:var(--surface); }
+.leg { display:grid; grid-template-columns:34px minmax(0,1.4fr) 120px minmax(0,1.3fr) 90px; gap:12px; align-items:center; padding:10px 16px; border-top:1px solid var(--line); font-size:13.5px; }
+.leg:first-child { border-top:0; }
+.legno { font-weight:300; font-style:italic; font-size:20px; color:var(--muted); }
+.legname { font-weight:600; color:var(--fg); }
+.legmode { justify-self:start; font-size:11px; font-weight:600; letter-spacing:.04em; text-transform:uppercase; padding:3px 9px; border-radius:999px; background:var(--ghost); color:var(--fg); border:1px solid var(--line); }
+.legmode.push { background:var(--cyan-fill); color:var(--cyan-text); border-color:transparent; }
+.legtrig { color:var(--muted); }
+.legmsgs { font-family:var(--font-mono); font-size:12.5px; color:var(--muted); text-align:right; }
+@media (max-width:700px) { .leg { grid-template-columns:30px minmax(0,1fr) auto; } .legtrig, .legmsgs { grid-column:2 / -1; text-align:left; } }
+.diagram { background:var(--surface); border:1px solid var(--line); border-radius:var(--radius-md); padding:16px; overflow-x:auto; margin:0 0 26px; }
+.diagram pre.mermaid { margin:0; background:transparent; }
+.phases { display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); gap:14px; }
+.phase { border:1px solid var(--line); border-radius:var(--radius-md); padding:14px 16px; background:var(--surface); display:grid; gap:8px; align-content:start; }
+.ph-top { display:flex; align-items:baseline; gap:10px; flex-wrap:wrap; }
+.ph-k { font-weight:800; color:var(--cyan-text); }
+.phase h3 { font-size:15px; }
+.phase p { font-size:13.5px; }
+
+/* tables */
+.tw { overflow-x:auto; border:1px solid var(--line); border-radius:var(--radius-md); margin:8px 0 18px; background:var(--surface); }
+table.t { width:100%; border-collapse:collapse; font-size:13px; }
+.t th { background:var(--th-bg); color:var(--th-fg); text-align:left; font-weight:600; font-size:11px; letter-spacing:.06em; text-transform:uppercase; padding:9px 12px; white-space:nowrap; position:sticky; top:0; }
+.t td { padding:9px 12px; border-top:1px solid var(--line); vertical-align:top; }
+.t tbody tr:hover td { background:var(--ghost); }
+.fname { font-family:var(--font-mono); font-size:12.5px; font-weight:700; color:var(--fg); white-space:nowrap; }
+.ns, .keys { font-family:var(--font-mono); font-size:12px; color:var(--muted); }
+.ns { min-width:220px; }
+.path { font-family:var(--font-mono); font-size:12px; color:var(--muted); }
+.type { font-family:var(--font-mono); font-size:11.5px; padding:1px 7px; border-radius:var(--radius-sm); background:var(--surface-2); color:var(--fg); }
+.rec-c { font-weight:600; color:var(--fg); white-space:nowrap; }
+.qno { font-weight:700; color:var(--fg); white-space:nowrap; font-variant-numeric:tabular-nums; }
+tr.stamp td { background:var(--surface-2); }
+.dict td:last-child { min-width:220px; }
+.msgno { display:inline-block; font-family:var(--font-mono); font-weight:700; font-size:12.5px; color:var(--cn-cream); background:var(--cn-navy); border-radius:var(--radius-sm); padding:1px 7px; }
+.msgno.sm { font-size:11.5px; padding:0 6px; }
+.cn-badge { display:inline-block; padding:2px 8px; border-radius:999px; font-size:10px; font-weight:600; text-transform:uppercase; letter-spacing:.04em; white-space:nowrap; }
+.cn-badge-cyan { background:var(--cyan-fill); color:var(--cyan-text); }
+.cn-badge-navy { background:var(--ghost); color:var(--fg); border:1px solid var(--line); }
+
+/* callouts */
+.callout { border-left:3px solid var(--cn-navy); background:var(--surface); border-radius:0 var(--radius-md) var(--radius-md) 0; padding:14px 18px; margin:14px 0; display:grid; gap:6px; }
+.callout.cy { border-left-color:var(--cn-cyan); }
+.callout-label { font-size:10px; font-weight:600; letter-spacing:2.4px; text-transform:uppercase; color:var(--muted); }
+.callout ul { margin:0; padding-left:18px; display:grid; gap:5px; font-size:13.5px; }
+.callout p { font-size:13.5px; }
+
+/* payloads */
+.pls { display:grid; gap:16px; }
+.pl { border:1px solid var(--line); border-radius:var(--radius-md); overflow:hidden; background:var(--surface); }
+.pl-head { display:flex; flex-wrap:wrap; gap:6px 12px; align-items:center; padding:10px 14px; border-bottom:1px solid var(--line); }
+.pl-name { font-weight:600; color:var(--fg); font-size:14px; }
+.dir { font-size:12.5px; color:var(--muted); }
+.pl-head .cn-badge { margin-left:auto; }
+.pl-empty { padding:14px; font-size:13.5px; color:var(--muted); }
+pre.code { margin:0; background:var(--code-bg); color:var(--code-fg); padding:14px 16px; overflow-x:auto; font-size:12.5px; line-height:1.55; max-height:560px; }
+.jk { color:var(--j-key); } .js { color:var(--j-str); } .jn { color:var(--j-num); } .jb { color:var(--j-bool); }
+
+/* segmented filter */
+.segs { display:flex; flex-wrap:wrap; gap:6px; margin:4px 0 10px; }
+.seg { font:600 12px var(--font-mono); padding:5px 10px; border-radius:999px; border:1px solid var(--line); background:var(--surface); color:var(--fg); cursor:pointer; }
+.seg:hover { background:var(--ghost); }
+.seg.on { background:var(--cn-navy); color:var(--cn-cream); border-color:var(--cn-navy); }
+
+/* rules */
+.rules { display:grid; gap:20px; max-width:80ch; }
+.rules h3 { font-size:16px; margin-bottom:8px; }
+.rules ul, .rules ol { margin:0; padding-left:20px; display:grid; gap:7px; font-size:14px; }
+
+.formula { display:flex; align-items:center; gap:12px; flex-wrap:wrap; padding:14px 18px; margin:4px 0; background:var(--surface); border:1px solid var(--line); border-left:3px solid var(--cn-cyan); border-radius:0 var(--radius-md) var(--radius-md) 0; font-size:14px; color:var(--fg); font-weight:600; }
+.formula .eq { color:var(--muted); font-weight:400; }
+.formula .frac { display:inline-flex; flex-direction:column; text-align:center; font-family:var(--font-mono); font-size:13px; font-weight:500; }
+.formula .frac span:first-child { border-bottom:1px solid var(--fg); padding-bottom:3px; margin-bottom:3px; }
+.cn-footer { background:var(--cn-charcoal); padding:14px 24px; display:flex; flex-wrap:wrap; gap:8px; justify-content:space-between; align-items:center; }
+.cn-footer-brand { font-size:11px; font-weight:800; letter-spacing:2px; color:var(--cn-cream); text-transform:uppercase; }
+.cn-footer-copy { font-size:11px; color:rgba(248,246,241,.45); }
+/* capacity page additions */
+.calc { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:18px; }
+@media (max-width:860px) { .calc { grid-template-columns:minmax(0,1fr); } }
+.calc fieldset { border:1px solid var(--line); border-radius:var(--radius-md); background:var(--surface); padding:14px 16px 16px; margin:0; display:grid; gap:10px; min-width:0; }
+.calc legend { font-size:10px; font-weight:600; letter-spacing:2.4px; text-transform:uppercase; color:var(--muted); padding:0 6px; }
+.fld { display:grid; grid-template-columns:minmax(0,1fr) 128px; gap:10px; align-items:center; font-size:13.5px; }
+.fld label { color:var(--fg); }
+.fld small { display:block; color:var(--muted); font-size:11.5px; line-height:1.4; }
+.fld input, .fld select { width:100%; font:500 13.5px var(--font-sans); color:var(--fg); background:var(--bg); border:1px solid var(--line); border-radius:var(--radius-sm); padding:6px 8px; font-variant-numeric:tabular-nums; }
+.fld input:focus, .fld select:focus { outline:2px solid var(--cn-cyan); outline-offset:0; }
+.presets { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:12px; }
+.out { border:1px solid var(--line); border-radius:var(--radius-md); background:var(--surface); overflow:hidden; }
+.out-row { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:12px; padding:10px 16px; border-top:1px solid var(--line); font-size:13.5px; align-items:baseline; }
+.out-row:first-child { border-top:0; }
+.out-row .v { font-weight:700; color:var(--fg); font-variant-numeric:tabular-nums; text-align:right; }
+.out-row .why { display:block; color:var(--muted); font-size:11.5px; }
+.out-hero { padding:16px; background:var(--cn-hero-bg); color:var(--cn-cream); display:grid; gap:4px; }
+.out-hero .lbl { font-size:10px; letter-spacing:2.4px; text-transform:uppercase; color:rgba(248,246,241,.6); font-weight:600; }
+.out-hero .big { font-size:36px; font-weight:800; letter-spacing:-1px; color:var(--cn-gold); font-variant-numeric:tabular-nums; line-height:1.1; }
+.out-hero .sub { font-size:12.5px; color:rgba(248,246,241,.75); }
+.verdict { margin:12px 0 0; padding:12px 16px; border-radius:var(--radius-md); font-size:13.5px; border-left:3px solid var(--cn-cyan); background:var(--surface); }
+.verdict.warn { border-left-color:var(--cn-gold); }
+.steps { counter-reset:s; list-style:none; margin:0; padding:0; display:grid; gap:12px; }
+.steps > li { counter-increment:s; display:grid; grid-template-columns:36px minmax(0,1fr); gap:12px; align-items:start; }
+.steps > li::before { content:counter(s); font-size:22px; font-weight:300; font-style:italic; color:var(--gold-text); line-height:1.2; }
+.steps h3 { font-size:15px; margin-bottom:4px; }
+.steps p, .steps li li { font-size:14px; }
+.fx { font-family:var(--font-mono); font-size:13px; background:var(--surface-2); color:var(--fg); padding:8px 12px; border-radius:var(--radius-sm); display:block; margin-top:6px; overflow-x:auto; white-space:pre; }
+.lesson { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:0; border:1px solid var(--line); border-radius:var(--radius-md); overflow:hidden; background:var(--surface); }
+.lesson > div { padding:12px 16px; border-top:1px solid var(--line); font-size:13.5px; }
+.lesson > div:nth-child(-n+2) { border-top:0; }
+.lesson > div:nth-child(odd) { border-right:1px solid var(--line); }
+.lesson .h { font-size:10px; font-weight:600; letter-spacing:2.4px; text-transform:uppercase; color:var(--muted); background:var(--surface-2); }
+@media (max-width:700px) { .lesson { grid-template-columns:minmax(0,1fr); } .lesson > div:nth-child(odd) { border-right:0; } .lesson > div:nth-child(2) { border-top:1px solid var(--line); } }
+.check { list-style:none; margin:0; padding:0; display:grid; gap:8px; }
+.check li { display:grid; grid-template-columns:20px minmax(0,1fr); gap:8px; font-size:14px; }
+.check li::before { content:""; width:14px; height:14px; border:1.5px solid var(--muted); border-radius:3px; margin-top:4px; }
+
+/* ===== Samgori Solutions restyle =====
+   Navy bands, bronze accents, Newsreader display serif over Jost body, square edges, hairline rules. */
+:root {
+  --navy:#26405F; --navy-deep:#1B2F47; --bronze:#D7A667; --bronze-rule:#B8884A; --bronze-soft:#F1E6D6; --bronze-text:#7F5A2C;
+  --azure:#B4C8D6; --azure-soft:#E1E8EE; --azure-line:#CAD6DF; --azure-text:#2D4B6E; --cadet:#4E8C96; --teal:#356874;
+  --cn-charcoal:#26405F; --cn-navy:#26405F; --cn-hero-bg:#26405F; --cn-gold:#D7A667; --cn-gold-dark:#B8884A;
+  --cn-cyan:#B8884A; --cn-cream:#F4F2ED; --cn-offwhite:#F4F2ED;
+  --font-sans:'Jost',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --font-display:'Newsreader',Georgia,'Times New Roman',serif;
+  --radius-sm:2px; --radius-md:2px;
+  --bg:#EEF0F0; --surface:#FFFFFF; --surface-2:#E6EAEC; --fg:#16212E; --body:#16212E;
+  --muted:#4A5668; --line:#CBD3D9; --ghost:rgba(38,64,95,.06);
+  --gold-text:#7F5A2C; --cyan-text:#356874; --cyan-fill:#F1E6D6;
+  --th-bg:#E1E8EE; --th-fg:#2D4B6E; --code-bg:#1B2F47; --code-fg:#F4F2ED;
+  --j-key:#A7C6CB; --j-str:#D7A667; --j-num:#B4C8D6; --j-bool:#F1E6D6;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg:#16212E; --surface:#1D2D42; --surface-2:#22354D; --fg:#F4F2ED; --body:rgba(244,242,237,.88);
+  --muted:#B9C5D3; --line:rgba(255,255,255,.14); --ghost:rgba(255,255,255,.05);
+  --gold-text:#D7A667; --cyan-text:#A7C6CB; --cyan-fill:rgba(215,166,103,.16);
+  --th-bg:#22354D; --th-fg:#B4C8D6; --code-bg:#111A26; --code-fg:#F4F2ED; --cn-navy:#3A5B85; color-scheme:dark;
+} }
+:root[data-theme="dark"] {
+  --bg:#16212E; --surface:#1D2D42; --surface-2:#22354D; --fg:#F4F2ED; --body:rgba(244,242,237,.88);
+  --muted:#B9C5D3; --line:rgba(255,255,255,.14); --ghost:rgba(255,255,255,.05);
+  --gold-text:#D7A667; --cyan-text:#A7C6CB; --cyan-fill:rgba(215,166,103,.16);
+  --th-bg:#22354D; --th-fg:#B4C8D6; --code-bg:#111A26; --code-fg:#F4F2ED; --cn-navy:#3A5B85; color-scheme:dark;
+}
+body { font-family:var(--font-sans); font-size:16px; font-weight:400; line-height:1.65; }
+h1,h2,h3,.card h3,.phase h3 { font-family:var(--font-display); font-weight:400; letter-spacing:-.01em; }
+a { color:var(--cyan-text); text-underline-offset:3px; }
+:focus-visible { outline:2px solid var(--teal); outline-offset:2px; }
+.eyebrow, .callout-label, .card-label, .lesson .h, .fld legend, .calc legend, .out-hero .lbl, .meta dt { font-family:var(--font-sans); font-weight:500; letter-spacing:.2em; }
+
+/* header: navy bar, wordmark left, doc label right */
+.cn-header { background:var(--navy); height:77px; border-bottom:1px solid rgba(255,255,255,.14); padding:0 max(24px,calc((100vw - 1240px)/2 + 24px)); }
+.sg-brand { display:flex; align-items:center; gap:12px; text-decoration:none; }
+.sg-brand svg { flex:none; }
+.sg-word { font:500 13.5px var(--font-sans); letter-spacing:.2em; text-transform:uppercase; color:#F4F2ED; white-space:nowrap; }
+.sg-word span { color:var(--bronze); font-weight:400; margin-left:.45em; }
+.hdr-doc { gap:16px; }
+.hdr-doc .lbl { font:500 12px var(--font-sans); letter-spacing:.2em; color:#F4F2ED; padding-bottom:3px; border-bottom:1px solid var(--bronze); }
+.ver-pill { font:500 11px var(--font-sans); letter-spacing:.16em; text-transform:uppercase; color:var(--bronze); background:transparent; border:1px solid rgba(215,166,103,.55); padding:3px 11px; }
+@media (max-width:640px) { .cn-header { padding:0 16px; } .hdr-doc .lbl { display:none; } }
+
+/* hero */
+.hero { background:var(--navy); }
+.hero-in { grid-template-columns:minmax(0,1fr); max-width:1240px; padding:72px 24px 56px; gap:0; }
+.hero .eyebrow { display:flex; align-items:center; gap:14px; color:var(--azure); }
+.hero .eyebrow::before { content:""; width:32px; height:1px; background:var(--bronze); }
+.hero h1 { font-family:var(--font-display); font-weight:300; font-size:clamp(40px,6vw,72px); letter-spacing:-.026em; line-height:1.04; margin:20px 0 22px; max-width:14ch; }
+.hero h1 em { font-style:italic; font-weight:300; color:var(--bronze); letter-spacing:-.026em; }
+.hero .lede { font-weight:300; font-size:19px; line-height:1.6; color:#D5DBE2; max-width:60ch; }
+.meta { border-top:1px solid rgba(255,255,255,.14); margin-top:34px; padding-top:22px; gap:14px 44px; }
+.meta dt { color:var(--azure); font-size:10.5px; }
+.meta dd { font-weight:500; font-size:14.5px; color:#F4F2ED; }
+.changed { color:#D5DBE2; font-weight:300; font-size:14.5px; max-width:80ch; }
+.changed b { color:var(--bronze); font-weight:500; }
+
+/* layout and chapter heads */
+.wrap { padding-block:56px 80px; }
+.toc a { font-size:14px; border-left-width:2px; }
+.toc a.on { border-left-color:var(--bronze); color:var(--fg); font-weight:500; }
+.toc-ver { border-radius:0; background:var(--surface); }
+section.ch { margin-bottom:72px; }
+.ch-head { gap:18px; padding-bottom:14px; border-bottom:1px solid var(--line); }
+.ch-num { font-family:var(--font-display); font-style:italic; font-weight:300; font-size:38px; color:var(--bronze-rule); }
+.ch-head h2 { font-family:var(--font-display); font-weight:300; font-size:clamp(28px,3.4vw,40px); letter-spacing:-.02em; line-height:1.1; }
+h3.sub { font-size:20px; letter-spacing:-.01em; }
+.prose { font-size:16.5px; }
+
+/* cards, callouts, lessons: flat white panels with a hairline and a navy or bronze top rule */
+.card { border-top:2px solid var(--navy); border-radius:2px; }
+.card.sor { border-top-color:var(--bronze); }
+.callout { border-left:2px solid var(--navy); border-radius:0; background:var(--surface); }
+.callout.cy { border-left-color:var(--bronze-rule); }
+.formula { border-left:2px solid var(--bronze-rule); border-radius:0; }
+.lesson, .tw, .legs, .out, .pl, .phase, .calc fieldset, .diagram { border-radius:2px; }
+.lesson .h { background:var(--surface-2); color:var(--azure-text); }
+
+/* tables: pale azure header, hairline rows, small uppercase labels */
+.t th { font:500 10.5px var(--font-sans); letter-spacing:.16em; padding:11px 14px; border-bottom:1px solid var(--azure-line); position:static; }
+.t td { padding:13px 14px; border-top:1px solid var(--azure-line); font-size:14px; }
+.t tbody tr:hover td { background:var(--ghost); }
+.rec-c, .qno { font-weight:500; }
+.fname, .ns, .keys, .path, code, .fx, .legmsgs, .rec, .seg { font-family:'SF Mono',ui-monospace,Menlo,Consolas,monospace; }
+.type { background:var(--azure-soft); color:var(--azure-text); border-radius:2px; }
+.msgno { background:var(--navy); color:#F4F2ED; border-radius:2px; }
+
+/* pills echo the Migrate/Rewrite/Retire verdict chips: outlined, rounded, small caps */
+.cn-badge, .legmode { font:500 10.5px var(--font-sans); letter-spacing:.16em; border:1px solid var(--line); background:transparent; color:var(--azure-text); padding:3px 11px; }
+.cn-badge-cyan, .legmode.push { background:var(--bronze-soft); color:var(--bronze-text); border-color:transparent; }
+.seg { font:500 11.5px var(--font-sans); letter-spacing:.14em; text-transform:uppercase; padding:7px 14px; border:1px solid var(--line); background:var(--surface); color:var(--azure-text); }
+.seg:hover { border-color:var(--navy); background:var(--surface); }
+.seg.on { background:var(--navy); color:#F4F2ED; border-color:var(--navy); }
+
+/* steps, checklist */
+.steps > li::before { font-family:var(--font-display); font-style:italic; font-weight:300; font-size:30px; color:var(--bronze-rule); }
+.steps h3 { font-size:19px; }
+.check li::before { border-radius:0; border-color:var(--bronze-rule); }
+.fx { background:var(--azure-soft); color:var(--azure-text); border-radius:2px; }
+
+/* code: deep navy */
+pre.code { background:var(--code-bg); border-radius:0; }
+
+/* calculator */
+.fld input, .fld select { background:#fff; border-radius:2px; border:1px solid var(--azure-line); font-family:var(--font-sans); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .fld input, :root:not([data-theme="light"]) .fld select { background:var(--bg); } }
+.fld input:focus, .fld select:focus { outline:2px solid var(--teal); }
+.out-hero { background:var(--navy); }
+.out-hero .big { font-family:var(--font-display); font-weight:300; font-size:56px; letter-spacing:-.03em; color:var(--bronze); }
+.out-hero .sub { color:#D5DBE2; font-weight:300; }
+.verdict { border-left:2px solid var(--cadet); border-radius:0; }
+.verdict.warn { border-left-color:var(--bronze-rule); background:var(--bronze-soft); color:#16212E; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .verdict.warn { background:rgba(215,166,103,.14); color:var(--fg); } }
+
+/* footer: navy, wordmark, small print */
+.cn-footer { background:var(--navy); border-top:1px solid rgba(255,255,255,.14); padding:34px max(24px,calc((100vw - 1240px)/2 + 24px)); align-items:flex-start; }
+.cn-footer .sg-word { font-size:12.5px; }
+.cn-footer-copy { font:300 13px/1.6 var(--font-sans); color:#B9C5D3; max-width:70ch; text-align:left; }
+.cn-footer-copy a { color:#A7C6CB; }
+
+/* cost builder */
+.bld { margin:6px 0 26px; }
+.bld .calc { margin-top:12px; }
+.bld select, .bld input[type=text], .bld input[type=number] { width:100%; font:500 13.5px var(--font-sans); color:var(--fg); background:#fff; border:1px solid var(--azure-line); border-radius:2px; padding:6px 8px; font-variant-numeric:tabular-nums; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .bld select, :root:not([data-theme="light"]) .bld input { background:var(--bg); } }
+:root[data-theme="dark"] .bld select, :root[data-theme="dark"] .bld input { background:var(--bg); }
+.brow { display:grid; grid-template-columns:minmax(0,1fr) 64px 124px 30px; gap:8px; align-items:end; padding-bottom:12px; border-bottom:1px solid var(--line); }
+.brow > div:first-child { grid-column:1 / -1; }
+.bld .fld { grid-template-columns:minmax(0,1fr); gap:5px; }
+.bld .fld label { font-weight:500; }
+#b-table th.num, #b-table td.num { text-align:right; }
+.brow label { display:block; font:500 10px var(--font-sans); letter-spacing:.16em; text-transform:uppercase; color:var(--muted); margin-bottom:3px; }
+.brow .x { height:32px; border:1px solid var(--line); background:transparent; color:var(--muted); cursor:pointer; border-radius:2px; font-size:16px; line-height:1; }
+.brow .x:hover { border-color:var(--navy); color:var(--fg); }
+.addrow { justify-self:start; font:500 11.5px var(--font-sans); letter-spacing:.14em; text-transform:uppercase; color:var(--cyan-text); background:transparent; border:0; border-bottom:1px solid var(--bronze); padding:4px 0; cursor:pointer; }
+.bld-tot td { font-weight:600; background:var(--surface-2); }
+.hint { border-left:2px solid var(--bronze-rule); background:var(--bronze-soft); color:#16212E; padding:10px 14px; font-size:13.5px; margin:8px 0 0; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .hint { background:rgba(215,166,103,.14); color:var(--fg); } }
+:root[data-theme="dark"] .hint { background:rgba(215,166,103,.14); color:var(--fg); }
+
+/* ===== Samgori site chrome (header, footer) ===== */
+.sg-header { background:#26405F; border-bottom:1px solid rgba(255,255,255,.14); position:sticky; top:0; z-index:100; }
+.sg-wrap { max-width:1160px; margin:0 auto; padding:18px 20px; display:flex; align-items:center; justify-content:space-between; gap:20px; }
+.sg-brand { display:block; line-height:0; }
+.sg-brand .logo-h { height:40px; width:auto; display:block; }
+.sg-nav { display:flex; align-items:center; gap:28px; flex-wrap:wrap; justify-content:flex-end; }
+.sg-nav a { font:500 11.84px/19px 'Jost',system-ui,sans-serif; letter-spacing:.2em; text-transform:uppercase; color:#D5DBE2; text-decoration:none; padding:7px 0 8px; border-bottom:1px solid transparent; }
+.sg-nav a:hover { color:#F4F2ED; }
+.sg-nav a[aria-current="page"] { color:#F4F2ED; border-bottom-color:#D7A667; }
+.sg-nav a.cta { color:#F4F2ED; border-bottom-color:#D7A667; }
+@media (max-width:900px) { .sg-wrap { flex-wrap:wrap; padding:14px 16px; } .sg-nav { gap:6px 18px; justify-content:flex-start; } .sg-brand .logo-h { height:34px; } }
+.sg-footer { background:#26405F; border-top:1px solid rgba(255,255,255,.14); color:#F4F2ED; margin-top:0; }
+.sg-footer .sg-wrap { align-items:flex-start; flex-direction:column; gap:14px; padding:40px 20px 44px; }
+.sg-footer .logo-h { height:38px; }
+.foot-rule { display:block; width:40px; height:1px; background:#D7A667; }
+.foot-nav { display:flex; flex-wrap:wrap; gap:6px 24px; }
+.foot-nav a { font:500 11.84px 'Jost',sans-serif; letter-spacing:.2em; text-transform:uppercase; color:#D5DBE2; text-decoration:none; }
+.foot-nav a:hover { color:#F4F2ED; }
+.sg-footer p { margin:0; font:300 14px/1.6 'Jost',sans-serif; color:#B9C5D3; max-width:72ch; }
+.sg-footer p a { color:#A7C6CB; }
+
+/* article specifics */
+.crumb { display:inline-block; margin-bottom:6px; font:500 11px 'Jost',sans-serif; letter-spacing:.2em; text-transform:uppercase; color:#B4C8D6; text-decoration:none; border-bottom:1px solid rgba(215,166,103,.6); padding-bottom:2px; }
+.crumb:hover { color:#F4F2ED; }
+.hero .eyebrow { margin-top:18px; }
+/* the article's own sticky contents rail sits below the 77px site header */
+.toc { top:calc(77px + 24px); }
+section.ch { scroll-margin-top:100px; }
+/* align the article column with the site header and footer */
+.hero-in, .wrap { max-width:1160px; padding-inline:20px; }
+@media (max-width:900px) { .hero-in, .wrap { padding-inline:16px; } }
+</style>
+
+<header class="sg-header"><div class="sg-wrap"><a class="sg-brand" href="/" aria-label="Samgori Solutions home"><svg class="logo-h" viewBox="0 0 430 80" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Samgori Solutions"><g transform="translate(0 8)"><defs><clipPath id="k1"><circle cx="32" cy="32" r="27"></circle></clipPath></defs><circle cx="32" cy="32" r="30.4" fill="none" stroke="#D7A667" stroke-width="2"></circle><g clip-path="url(#k1)"><path d="M0 40 C14 40 22 30 34 28 C46 26 54 34 64 36 V70 H0Z" fill="#456887" stroke="#26405F" stroke-width="1.5" stroke-linejoin="round"></path><path d="M0 44 C6 37 12 33 20 34 C32 36 38 47 50 47 C56 47 60 45 64 44 V70 H0Z" fill="#7F9DB8" stroke="#26405F" stroke-width="1.5" stroke-linejoin="round"></path><path d="M0 53 C14 53 22 47 36 47 C48 47 54 53 64 51 V70 H0Z" fill="#B4C8D6" stroke="#26405F" stroke-width="1.5" stroke-linejoin="round"></path><circle cx="44" cy="17" r="3.2" fill="#D7A667"></circle></g></g><text x="84" y="47" font-family="Jost,sans-serif" font-size="22" letter-spacing="6.5" fill="#F4F2ED"><tspan font-weight="500">SAMGORI</tspan><tspan font-weight="400" fill="#D7A667" dx="14">SOLUTIONS</tspan></text></svg></a><nav class="sg-nav" aria-label="Primary"><a href="/#why-now">Why now</a><a href="/#why-samgori">Why Samgori</a><a href="/services.html">Services</a><a href="/portfolio.html">Portfolio</a><a href="/field-notes/" aria-current="page">Field Notes</a><a href="/about.html">About</a><a class="cta" href="/about.html#contact">Contact Us</a></nav></div></header>
+
+<section class="hero">
+  <div class="hero-in">
+    <div>
+      <a class="crumb" href="/field-notes/">← All field notes</a>
+      <span class="eyebrow">Field Notes · Standard</span>
+      <h1>Integration <em>capacity</em> standard</h1>
+      <p class="lede">How to size every NetSuite integration before it is built: how many records one call can safely handle, and how often the other system has to call to keep up.</p>
+      <dl class="meta">
+        <div><dt>Applies to</dt><dd>RESTlets, Suitelets, scheduled and map/reduce scripts</dd></div>
+        <div><dt>Required in</dt><dd>Every integration RFD</dd></div>
+      </dl>
+    </div>
+  </div>
+</section>
+
+<div class="wrap">
+  <nav class="toc" aria-label="Contents">
+    <span class="eyebrow">Contents</span>
+    <ol>
+      <li><a href="#why"><span class="n">1</span>Why this exists</a></li>
+      <li><a href="#limits"><span class="n">2</span>The limits</a></li>
+      <li><a href="#costs"><span class="n">3</span>Unit costs</a></li>
+      <li><a href="#method"><span class="n">4</span>Sizing method</a></li>
+      <li><a href="#history"><span class="n">5</span>Production history</a></li>
+      <li><a href="#calculator"><span class="n">6</span>Calculator</a></li>
+      <li><a href="#patterns"><span class="n">7</span>Build patterns</a></li>
+      <li><a href="#rfd"><span class="n">8</span>What every RFD states</a></li>
+      <li><a href="#example"><span class="n">9</span>Worked example</a></li>
+      <li><a href="#lessons"><span class="n">10</span>Common failure patterns</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <section class="ch" id="why">
+      <div class="ch-head"><span class="ch-num">1</span><h2>Why this exists</h2></div>
+      <div class="prose">
+        <p>NetSuite gives every script call a fixed budget of governance units and a time limit. If a call runs out of either, NetSuite stops it and the caller gets no response. Any records the script already marked as sent are lost with it.</p>
+        <p>Integrations are often built with batch sizes picked by hand and a polling schedule that the other system chose on its own. No one works out what a call can afford or how often the caller has to call to keep up with the volume. The usual result is a call whose cost grows with the backlog and uses more than half its time limit, inbound calls with no size limit, and polling around the clock that mostly returns nothing while the same records are re-sent on every call.</p>
+        <p>This standard makes both numbers, <b>batch size</b> and <b>call frequency</b>, a required, calculated part of every integration design.</p>
+      </div>
+      <div class="callout cy"><span class="callout-label">The rule in one line</span>
+        <p>Batch size comes from the unit and time budgets. Call frequency comes from volume and batch size. Both are written into the RFD before any code is written, and both are measured in UAT.</p></div>
+    </section>
+
+    <section class="ch" id="limits">
+      <div class="ch-head"><span class="ch-num">2</span><h2>The limits</h2></div>
+      <p class="prose small muted">Per call or per invocation. These are the values in NetSuite Help at the time of writing. Confirm them against the current Help topics "SuiteScript Governance and Limits" and "Script Execution Time Limits" before a design is signed off.</p>
+      <div class="tw"><table class="t">
+        <thead><tr><th>Script type</th><th>Units per call</th><th>Time limit</th><th>Notes</th></tr></thead>
+        <tbody>
+          <tr><td class="rec-c">RESTlet</td><td class="num">5,000</td><td>5 minutes</td><td>The usual entry point for an external system. The caller waits for the whole call.</td></tr>
+          <tr><td class="rec-c">Suitelet</td><td class="num">1,000</td><td>5 minutes</td><td>Rarely right for system-to-system traffic.</td></tr>
+          <tr><td class="rec-c">User event</td><td class="num">1,000</td><td>5 minutes</td><td>Runs inside the user's save. Never do integration calls here.</td></tr>
+          <tr><td class="rec-c">Scheduled</td><td class="num">10,000</td><td>60 minutes</td><td>One queue slot per run.</td></tr>
+          <tr><td class="rec-c">Map/reduce</td><td>getInputData 10,000 · map 1,000 · reduce 5,000 · summarize 10,000</td><td>60 · 5 · 15 · 60 minutes</td><td>Limits apply per invocation and the framework yields for you. The right tool for large volumes.</td></tr>
+        </tbody>
+      </table></div>
+      <div class="tw"><table class="t">
+        <thead><tr><th>Other limit</th><th>Value</th><th>Why it matters</th></tr></thead>
+        <tbody>
+          <tr><td class="rec-c">Rows per search page</td><td>1,000 (<code>getRange</code> or one page)</td><td>A batch can never be bigger than one page unless the script pages through results.</td></tr>
+          <tr><td class="rec-c">RESTlet payload</td><td>10 MB request or response</td><td>Bounds batch size for wide records with long text.</td></tr>
+          <tr><td class="rec-c">Concurrent web service calls</td><td>Account limit, shared by RESTlets, SOAP and REST web services</td><td>Read it at Setup › Integration › Integration Management › Integration Governance. Calls over the limit are rejected.</td></tr>
+        </tbody>
+      </table></div>
+    </section>
+
+    <section class="ch" id="costs">
+      <div class="ch-head"><span class="ch-num">3</span><h2>Unit costs</h2></div>
+      <p class="prose small muted">SuiteScript 2.x costs for the calls integrations use most. Treat them as planning estimates. The only reliable number is the one you measure (chapter 4, step 3, or chapter 5).</p>
+      <div class="tw"><table class="t">
+        <thead><tr><th>Call</th><th>Transaction</th><th>Custom record</th><th>Other records (customer, contact, employee, item)</th></tr></thead>
+        <tbody>
+          <tr><td class="fname">record.load / create / copy / transform</td><td class="num">10</td><td class="num">2</td><td class="num">5</td></tr>
+          <tr><td class="fname">Record.save</td><td class="num">20</td><td class="num">4</td><td class="num">10</td></tr>
+          <tr><td class="fname">record.submitFields</td><td class="num">10</td><td class="num">2</td><td class="num">5</td></tr>
+          <tr><td class="fname">record.delete</td><td class="num">20</td><td class="num">4</td><td class="num">10</td></tr>
+        </tbody>
+      </table></div>
+      <div class="tw"><table class="t">
+        <thead><tr><th>Call</th><th class="num">Units</th><th>Note</th></tr></thead>
+        <tbody>
+          <tr><td class="fname">search.lookupFields</td><td class="num">1</td><td>Cheapest way to read a few fields from one record.</td></tr>
+          <tr><td class="fname">search.load</td><td class="num">5</td><td></td></tr>
+          <tr><td class="fname">Search.runPaged / PagedData.fetch</td><td class="num">5</td><td>Per call, not per row.</td></tr>
+          <tr><td class="fname">ResultSet.getRange / each</td><td class="num">10</td><td>Per call, not per row. A search run inside a loop is the most common hidden cost.</td></tr>
+          <tr><td class="fname">query.runSuiteQL</td><td class="num">10</td><td>Per call.</td></tr>
+          <tr><td class="fname">https.request</td><td class="num">10</td><td>Plus the remote system's response time against the time limit.</td></tr>
+          <tr><td class="fname">email.send</td><td class="num">20</td><td></td></tr>
+          <tr><td class="fname">file.load / File.save</td><td class="num">10 / 20</td><td></td></tr>
+          <tr><td class="fname">task.submit</td><td class="num">20</td><td>Hand-off to a scheduled or map/reduce script.</td></tr>
+          <tr><td class="fname">log.*, format.*, runtime.getRemainingUsage</td><td class="num">0</td><td>Logging is free, so log the usage every time.</td></tr>
+        </tbody>
+      </table></div>
+      <div class="callout"><span class="callout-label">Watch for</span><ul>
+        <li><b>A search inside a loop.</b> 10 units per pass, so cost grows with the number of records, or worse, with the size of the backlog.</li>
+        <li><b>User events on the records you write.</b> <code>submitFields</code> and <code>save</code> fire the target record's user events in the same call, and their usage and time count against it.</li>
+        <li><b>Load and save when you only need to set fields.</b> <code>load + save</code> on a transaction costs 30; <code>submitFields</code> costs 10.</li>
+      </ul></div>
+    </section>
+
+    <section class="ch" id="method">
+      <div class="ch-head"><span class="ch-num">4</span><h2>Sizing method</h2></div>
+      <ol class="steps">
+        <li><div><h3>Pick the script type</h3><p>It sets the unit budget and time limit (chapter 2). An external system calling in means a RESTlet. If a single run needs more than one RESTlet call can afford, accept the request in the RESTlet and hand the work to a map/reduce script with <code>task.submit</code>.</p></div></li>
+        <li><div><h3>Write down the cost model</h3><p>Split the call into a fixed part that runs once (searches, lookups, loading config) and a part that runs once per record. List each SuiteScript call with its cost from chapter 3.</p>
+          <code class="fx">units(call) = fixed + per_record × records</code></div></li>
+        <li><div><h3>Measure it</h3><p>If the script, or one like it, already runs in production, read the cost from its execution log (chapter 5). The log has real records, real volumes and the real calling pattern. For a new script, log <code>runtime.getCurrentScript().getRemainingUsage()</code> at the end of the call and run it in sandbox once with 10 records and once with 50, using the largest realistic records. Time both runs too.</p>
+          <code class="fx">per_record = (used_50 − used_10) / 40
+fixed      = used_10 − 10 × per_record</code></div></li>
+        <li><div><h3>Set the batch size</h3><p>Take the smallest of four ceilings. Keep a reserve of 10% of the unit budget (500 for a RESTlet) and use only half the time limit, because record size varies and the target record's user events add cost.</p>
+          <code class="fx">B_units   = floor((budget − fixed − reserve) / per_record)
+B_time    = floor((time_limit × 0.5 − fixed_seconds) / seconds_per_record)
+B_rows    = 1,000 per search page (more only if the script pages)
+B_payload = floor(5 MB / bytes_per_record)
+batch     = min(B_units, B_time, B_rows, B_payload)</code></div></li>
+        <li><div><h3>Set the call frequency</h3><p>Size for the busiest hour, not the daily average. The interval has to clear peak volume and still meet the freshness the business needs.</p>
+          <code class="fx">calls_per_peak_hour = ceil(peak_hour_volume / batch)
+max_interval        = min(60 min / calls_per_peak_hour, latency_target)
+calls_per_day       ≈ 24 h / interval</code></div></li>
+        <li><div><h3>Check the backlog</h3><p>After an outage, a bulk load or a mass update, the queue fills. Work out how long it takes to clear at the chosen batch and interval. If records arrive faster than one batch per interval, the backlog never clears.</p>
+          <code class="fx">drain_capacity_per_call = batch − arrivals_per_interval
+drain_time              = ceil(backlog / drain_capacity_per_call) × interval</code></div></li>
+        <li><div><h3>Check concurrency</h3><p>Calls in flight at once must stay under the account limit, together with every other integration. A queue that marks records as sent is only safe with one caller at a time. Say so in the contract.</p></div></li>
+        <li><div><h3>Write it into the RFD and enforce it in code</h3><p>Record every number in the RFD's capacity section (chapter 8). The script checks remaining units as it goes (chapter 7), and inbound messages carry a maximum batch size that NetSuite enforces.</p></div></li>
+      </ol>
+    </section>
+
+    <section class="ch" id="history">
+      <div class="ch-head"><span class="ch-num">5</span><h2>Production history</h2></div>
+      <div class="prose">
+        <p>A script that already runs in production has measured itself. If it logs what it handled and how many units it had left, a SuiteQL query against the execution log (<code>scriptnote</code>) gives the cost model, the call interval and the real batch sizes without a sandbox run.</p>
+      </div>
+      <h3 class="sub">What the script must log</h3>
+      <p class="prose" style="margin-bottom:8px">One AUDIT line per call, written last. Scripts built to this standard already do this (chapter 7).</p>
+<pre class="code"><code>log.audit('usage', JSON.stringify({ records: records.length, unitsUsed: 5000 - script.getRemainingUsage(), ms: Date.now() - started }));</code></pre>
+      <h3 class="sub">Query: scripts that log the summary line</h3>
+<pre class="code"><code>SELECT TO_CHAR(date, 'YYYY-MM-DD HH24:MI:SS') AS ended, detail
+FROM scriptnote
+WHERE scripttype = 12345        -- the script's internal ID
+  AND title = 'usage'
+ORDER BY date</code></pre>
+      <h3 class="sub">Query: older scripts with a per-record line and a remaining-units line</h3>
+      <p class="prose" style="margin-bottom:8px">Pair each remaining-units entry with the per-record lines written in the 90 seconds before it. Group by time, not by log row ID, because row IDs are not in strict time order.</p>
+<pre class="code"><code>SELECT TO_CHAR(r.date, 'HH24:MI:SS') AS ended,
+       TO_NUMBER(r.detail)           AS remaining,
+       (SELECT COUNT(*) FROM scriptnote h
+         WHERE h.scripttype = r.scripttype
+           AND h.title LIKE 'Record sent%'   -- the per-record line
+           AND h.date BETWEEN r.date - (90/86400) AND r.date)    AS records
+FROM scriptnote r
+WHERE r.scripttype = 12345
+  AND r.title LIKE 'Remaining governance%'
+ORDER BY r.date</code></pre>
+      <h3 class="sub">Query: real demand, not log lines</h3>
+<pre class="code"><code>SELECT COUNT(*) AS sends, COUNT(DISTINCT SUBSTR(title, 13)) AS distinct_records
+FROM scriptnote
+WHERE scripttype = 12345 AND title LIKE 'Record sent%'</code></pre>
+      <h3 class="sub">Reading the result</h3>
+      <ul style="margin:0 0 6px;padding-left:20px;display:grid;gap:6px;max-width:80ch">
+        <li><b>Fixed cost</b> = units used by a call that handled 0 records.</li>
+        <li><b>Per-record cost</b> = (units used − fixed) ÷ records, from a full call. Check it holds across several call sizes.</li>
+        <li><b>Seconds per record</b> = (call duration − empty-call duration) ÷ records.</li>
+        <li><b>Interval</b> = the gap between call start times. <b>Volume</b> = distinct record IDs per hour, so re-sends do not count as demand.</li>
+      </ul>
+      <div class="callout"><span class="callout-label">Limits of the log</span><ul>
+        <li><b>History is short.</b> NetSuite purges execution logs. Scripts that log every step at DEBUG level fill the space and can leave only a few hours of history. Keep production deployments at AUDIT and log one summary line per call so history lasts.</li>
+        <li><b>A script that never logs remaining units</b> gives time and record counts only.</li>
+        <li><b>Overlapping calls</b> blur the time windows. Check start times before trusting a window.</li>
+        <li>The MCP SuiteQL connection reads production, so these queries run against real history.</li>
+      </ul></div>
+    </section>
+
+    <section class="ch" id="calculator">
+      <div class="ch-head"><span class="ch-num">6</span><h2>Calculator</h2></div>
+      <p class="prose small muted" style="margin-bottom:12px">Two steps. First describe what the script does for each record, including every lookup on a related record, and the calculator adds up the units and seconds from the chapter 3 costs. Then it sizes the batch and call interval from your volumes. The unit costs are NetSuite's; the seconds are planning estimates you can overtype. Replace any of the results with measured values when you have them.</p>
+      <div class="presets" role="group" aria-label="Load an example">
+        <button type="button" class="seg on" data-preset="opp">Opportunities · billing contact per record</button>
+        <button type="button" class="seg" data-preset="oppbulk">Same · contacts looked up once per call</button>
+        <button type="button" class="seg" data-preset="cust">Changed customers · no lookups</button>
+        <button type="button" class="seg" data-preset="blank">New integration</button>
+      </div>
+      <div class="bld">
+        <h3 class="sub">Step 1 · Build the cost per record</h3>
+        <div class="calc">
+          <fieldset><legend>The loop</legend>
+            <div class="fld"><label for="b-prim">Record type being looped through<small>An opportunity is a transaction</small></label>
+              <select id="b-prim"><option value="tx">Transaction (opportunity, estimate, sales order, invoice…)</option><option value="ot">Customer, contact, employee or item</option><option value="cu">Custom record</option></select></div>
+            <div class="fld"><label for="b-read">How the rows are read</label>
+              <select id="b-read"><option value="saved">Saved search</option><option value="script">Search built in the script</option><option value="suiteql">SuiteQL query</option></select></div>
+            <div class="fld"><label for="b-act">What happens to each looped record<small>Cost depends on the record type above</small></label>
+              <select id="b-act"><option value="none">Nothing, read only</option><option value="submit">Mark as sent with submitFields</option><option value="load">Load it</option><option value="loadsave">Load, change and save</option><option value="delete">Delete it</option></select></div>
+            <div class="fld"><label for="b-out">Call to the other system</label>
+              <select id="b-out"><option value="none">None</option><option value="batch">One https.request per batch</option><option value="record">One https.request per record</option></select></div>
+            <div class="fld"><label for="b-base">Seconds per record to build the payload<small>Plain script work, no NetSuite calls</small></label><input id="b-base" type="number" min="0" step="0.01"></div>
+          </fieldset>
+          <fieldset><legend>Lookups and other work for each record</legend>
+            <p class="small muted" style="margin:0">One line per call the script makes on a related record, such as the customer on an opportunity, the contacts on that customer, and the billing contact among them. Choose <b>Once per call</b> when one query can fetch them for the whole batch and the script looks results up in memory.</p>
+            <div id="b-rows" style="display:grid;gap:10px"></div>
+            <button type="button" class="addrow" id="b-add">+ Add a lookup</button>
+          </fieldset>
+        </div>
+        <div class="tw" style="margin-top:14px"><table class="t" id="b-table">
+          <thead><tr><th>Step</th><th>Runs</th><th class="num">Units</th><th class="num">Seconds</th><th class="num">Share of per-record units</th></tr></thead>
+          <tbody id="b-body"></tbody>
+        </table></div>
+        <div id="b-hints" aria-live="polite"></div>
+        <p class="prose small muted" style="margin-top:10px">The totals below fill the three cost fields in step 2. Overtype them with measured values from the production log or a sandbox run when you have them (chapter 5).</p>
+        <h3 class="sub" style="margin-top:26px">Step 2 · Size the batch and interval</h3>
+      </div>
+      <div class="calc">
+        <div style="display:grid;gap:14px;min-width:0">
+          <fieldset><legend>Budget</legend>
+            <div class="fld"><label for="c-type">Script type</label>
+              <select id="c-type"><option value="5000|300">RESTlet</option><option value="10000|3600">Scheduled</option><option value="1000|300">Suitelet</option><option value="5000|900">Map/reduce · reduce</option><option value="1000|300">Map/reduce · map</option></select></div>
+            <div class="fld"><label for="c-budget">Units per call</label><input id="c-budget" type="number" min="1" step="1"></div>
+            <div class="fld"><label for="c-reserve">Reserve units<small>10% of budget recommended</small></label><input id="c-reserve" type="number" min="0" step="10"></div>
+            <div class="fld"><label for="c-tlimit">Time limit, seconds</label><input id="c-tlimit" type="number" min="1" step="1"></div>
+          </fieldset>
+          <fieldset><legend>Cost per call</legend>
+            <div class="fld"><label for="c-fixed">Fixed units per call</label><input id="c-fixed" type="number" min="0" step="1"></div>
+            <div class="fld"><label for="c-fsec">Fixed seconds per call</label><input id="c-fsec" type="number" min="0" step="0.1"></div>
+            <div class="fld"><label for="c-per">Units per record</label><input id="c-per" type="number" min="0.1" step="0.5"></div>
+            <div class="fld"><label for="c-sec">Seconds per record<small>from the builder or a timed run</small></label><input id="c-sec" type="number" min="0" step="0.01"></div>
+            <div class="fld"><label for="c-kb">KB per record in payload</label><input id="c-kb" type="number" min="0" step="0.5"></div>
+          </fieldset>
+          <fieldset><legend>Volume</legend>
+            <div class="fld"><label for="c-day">Records per day</label><input id="c-day" type="number" min="0" step="1"></div>
+            <div class="fld"><label for="c-peak">Share in the busiest hour, %<small>20% if unknown</small></label><input id="c-peak" type="number" min="1" max="100" step="1"></div>
+            <div class="fld"><label for="c-lat">Freshness target, minutes<small>how stale the other system may be</small></label><input id="c-lat" type="number" min="1" step="1"></div>
+            <div class="fld"><label for="c-backlog">Backlog to clear, records</label><input id="c-backlog" type="number" min="0" step="1"></div>
+            <div class="fld"><label for="c-int">Interval in use today, minutes<small>leave 0 for a new design</small></label><input id="c-int" type="number" min="0" step="1"></div>
+          </fieldset>
+        </div>
+        <div style="min-width:0">
+          <div class="out" aria-live="polite">
+            <div class="out-hero"><span class="lbl">Records per call</span><span class="big" id="o-batch">—</span><span class="sub" id="o-bind">—</span></div>
+            <div class="out-row"><span>Unit ceiling<span class="why">(budget − fixed − reserve) ÷ units per record</span></span><span class="v" id="o-bu">—</span></div>
+            <div class="out-row"><span>Time ceiling<span class="why">(half the time limit − fixed seconds) ÷ seconds per record</span></span><span class="v" id="o-bt">—</span></div>
+            <div class="out-row"><span>Search page ceiling</span><span class="v">1,000</span></div>
+            <div class="out-row"><span>Payload ceiling<span class="why">5 MB ÷ KB per record</span></span><span class="v" id="o-bp">—</span></div>
+            <div class="out-row"><span>Units used by a full call</span><span class="v" id="o-used">—</span></div>
+            <div class="out-row"><span>Calls needed in the busiest hour</span><span class="v" id="o-cph">—</span></div>
+            <div class="out-row"><span>Longest safe interval<span class="why">the shorter of peak capacity and the freshness target</span></span><span class="v" id="o-int">—</span></div>
+            <div class="out-row"><span>Calls per day at that interval</span><span class="v" id="o-cpd">—</span></div>
+            <div class="out-row"><span>Backlog clears in<span class="why">at the longest safe interval</span></span><span class="v" id="o-drain">—</span></div>
+            <div class="out-row"><span>Daily capacity at today's interval</span><span class="v" id="o-today">—</span></div>
+          </div>
+          <div class="verdict" id="o-verdict">—</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="ch" id="patterns">
+      <div class="ch-head"><span class="ch-num">7</span><h2>Build patterns</h2></div>
+      <h3 class="sub">Outbound pull: stop on budget, not on a fixed count</h3>
+      <p class="prose" style="margin-bottom:8px">The batch size from chapter 4 is a maximum. The script also checks its remaining units and time before each record, and tells the caller when more is waiting.</p>
+<pre class="code"><code>/** @NApiVersion 2.1  @NScriptType Restlet */
+define(['N/runtime', 'N/search'], (runtime, search) =&gt; {
+  const MAX_BATCH = 200;          // from the RFD capacity table
+  const RESERVE = 500;            // 10% of 5,000
+  const PER_RECORD = 20;          // measured in sandbox
+  const TIME_BUDGET_MS = 150000;  // half of the 5-minute limit
+
+  const get = () =&gt; {
+    const script = runtime.getCurrentScript();
+    const started = Date.now();
+    const records = [];
+    const paged = search.load({ id: 'customsearch_outbound_queue' }).runPaged({ pageSize: 1000 });
+    let stopped = false;
+    for (const range of paged.pageRanges) {
+      for (const result of paged.fetch({ index: range.index }).data) {
+        const outOfUnits = script.getRemainingUsage() &lt; RESERVE + PER_RECORD;
+        const outOfTime = Date.now() - started &gt; TIME_BUDGET_MS;
+        if (records.length &gt;= MAX_BATCH || outOfUnits || outOfTime) { stopped = true; break; }
+        records.push(buildRecord(result));
+      }
+      if (stopped) break;
+    }
+    log.audit('usage', { sent: records.length, remaining: script.getRemainingUsage(), ms: Date.now() - started });
+    return { TotalResults: paged.count, CurrentResults: records.length, HasMore: paged.count &gt; records.length, Records: records };
+  };
+  return { get };
+});</code></pre>
+      <h3 class="sub">Inbound push: publish a maximum and enforce it</h3>
+<pre class="code"><code>const MAX_INBOUND = 50;   // from the RFD capacity table; the contract states it
+const post = (body) =&gt; {
+  if (body.Records.length &gt; MAX_INBOUND) {
+    return { Status: 'Rejected', MaxBatch: MAX_INBOUND, Received: body.Records.length };
+  }
+  // ...process, checking getRemainingUsage() as above
+};</code></pre>
+      <div class="gn">
+        <div class="callout cy"><span class="callout-label">Do</span><ul>
+          <li>Run every search once per call and look results up in memory.</li>
+          <li>Prefer <code>submitFields</code> and <code>lookupFields</code> over load and save.</li>
+          <li>Count records, not search rows. A record with lines is one record.</li>
+          <li>Return <code>HasMore</code> so the caller can call again at once while a backlog exists.</li>
+          <li>Log units used and elapsed time on every call, success or failure, in one AUDIT line.</li>
+          <li>Keep production deployments at AUDIT so the log keeps more than a few hours.</li>
+          <li>Move volumes that a RESTlet cannot carry to map/reduce.</li>
+        </ul></div>
+        <div class="callout"><span class="callout-label">Don't</span><ul>
+          <li>Pick a batch size without the cost model behind it.</li>
+          <li>Put a search, <code>lookupFields</code> or <code>load</code> inside a loop over the queue.</li>
+          <li>Let the cost of one call grow with the size of the backlog.</li>
+          <li>Accept an inbound batch of any size.</li>
+          <li>Let the other system choose the polling interval without the volume numbers.</li>
+          <li>Mark a record as sent before the other system confirms it received it.</li>
+        </ul></div>
+      </div>
+    </section>
+
+    <section class="ch" id="rfd">
+      <div class="ch-head"><span class="ch-num">8</span><h2>What every RFD states</h2></div>
+      <p class="prose" style="margin-bottom:12px">Add a <b>Capacity and frequency</b> section to the RFD (in Processing rules, or as its own chapter) with one row per message and these columns:</p>
+      <div class="tw"><table class="t">
+        <thead><tr><th>Msg</th><th>Script type · budget</th><th>Fixed units</th><th>Units per record</th><th>Seconds per record</th><th>Batch size and binding ceiling</th><th>Peak records / hour</th><th>Interval</th><th>Backlog drain time</th></tr></thead>
+        <tbody><tr><td><span class="msgno sm">1b</span></td><td>RESTlet · 5,000</td><td class="num">15</td><td class="num">20</td><td class="num">0.2</td><td>224 · units</td><td class="num">120</td><td>15 min</td><td>1,000 in 1 h 30 m</td></tr></tbody>
+      </table></div>
+      <p class="prose small muted">The example row is illustrative.</p>
+      <h3 class="sub">Sign-off checklist</h3>
+      <ul class="check">
+        <li>Every message has a script type, budget, cost model and batch size.</li>
+        <li>Costs were measured from production history, or from a sandbox run with the largest realistic records. Not only estimated.</li>
+        <li>The batch size is the smallest of the unit, time, page and payload ceilings, with the reserve kept.</li>
+        <li>The interval clears peak-hour volume and meets the freshness target.</li>
+        <li>Backlog drain time is stated for a realistic worst case (a day's outage or a bulk load).</li>
+        <li>No call's cost grows with the size of the backlog.</li>
+        <li>Inbound messages state a maximum batch size, and NetSuite enforces it.</li>
+        <li>Concurrent calls stay under the account limit together with other integrations, and the caller knows whether parallel calls are allowed.</li>
+        <li>Every call logs units used and elapsed time.</li>
+        <li>The interval is agreed with the other system's team and written into the contract.</li>
+      </ul>
+    </section>
+
+    <section class="ch" id="example">
+      <div class="ch-head"><span class="ch-num">9</span><h2>Worked example</h2></div>
+      <p class="prose" style="margin-bottom:10px">An outbound pull of changed customer records (RESTlet), sized from its production log. The figures are illustrative.</p>
+      <div class="tw"><table class="t">
+        <thead><tr><th>Step</th><th>Value</th><th>Source</th></tr></thead>
+        <tbody>
+          <tr><td>Budget, reserve, time budget</td><td>5,000 units, 500, 150 s</td><td>RESTlet limits, 10% reserve, half the time limit</td></tr>
+          <tr><td>Fixed cost</td><td>10 units, ≈ 5 s</td><td>Empty calls left 4,990 and took ≈ 5 s</td></tr>
+          <tr><td>Per record</td><td>5 units, ≈ 0.55 s</td><td>A call with 150 records left 4,240 and took ≈ 85 s; a call with 79 left 4,595 and took ≈ 45 s</td></tr>
+          <tr><td>Unit ceiling</td><td class="num">898</td><td>(5,000 − 10 − 500) ÷ 5</td></tr>
+          <tr><td>Time ceiling</td><td class="num">≈ 260</td><td>(150 − 5) ÷ 0.55</td></tr>
+          <tr><td>Batch size</td><td class="num">≈ 260</td><td>Time binds, not units. The code in production uses 150.</td></tr>
+          <tr><td>Interval</td><td>10 min</td><td>Gap between call start times in the log</td></tr>
+          <tr><td>Capacity at 150 every 10 min</td><td class="num">21,600 a day</td><td>150 × 144 calls</td></tr>
+          <tr><td>Real demand</td><td>≈ 1,000 customers in 9 h</td><td>About 3,900 sends but only 1,000 distinct customers</td></tr>
+        </tbody>
+      </table></div>
+      <div class="callout"><span class="callout-label">What this shows</span>
+        <p>Capacity is not the problem here; waste is. A group of about 80 customers was sent on most calls, roughly 2,700 of the 3,900 sends. Only the integration writes their sync date, yet their last-modified time keeps moving without a system note, so they look changed on every call. Counting distinct records instead of log lines exposed it. Without the production history it would have read as high demand.</p></div>
+</section>
+
+    <section class="ch" id="lessons">
+      <div class="ch-head"><span class="ch-num">10</span><h2>Common failure patterns</h2></div>
+      <div class="lesson">
+        <div class="h">What goes wrong</div><div class="h">What the standard requires</div>
+        <div>Batch sizes are typed in by hand, and log labels still show an older choice.</div><div>Batch size is derived from the cost model and recorded in the RFD.</div>
+        <div>A pull limits search rows rather than records, so one record with many lines fills the batch and can be cut off midway.</div><div>Count records, not rows.</div>
+        <div>A pull re-runs a saved search once per eligible record, so its cost grows with the backlog and the call eventually fails.</div><div>No call's cost grows with the backlog. One search per call.</div>
+        <div>Scripts never check remaining units, and some log nothing at all.</div><div>Check before each record and log every call.</div>
+        <div>Inbound write-backs accept batches of any size.</div><div>Publish and enforce a maximum inbound batch.</div>
+        <div>The other system polls every few minutes around the clock, chosen without volume figures, and most calls return nothing.</div><div>The interval is calculated from peak volume and freshness, and agreed in the contract.</div>
+        <div>A group of records is re-sent on most calls because something keeps moving their last-modified time.</div><div>Measure demand as distinct records, and make the “changed since” test immune to the script’s own writes.</div>
+        <div>The logs hold only a few hours, because the scripts log at DEBUG level.</div><div>Production runs at AUDIT with one summary line per call, so history survives.</div>
+        <div>Records are marked sent before the other system confirms it received them.</div><div>Mark sent only after the other system confirms receipt.</div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<footer class="sg-footer"><div class="sg-wrap"><svg class="logo-h" viewBox="0 0 430 80" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Samgori Solutions"><g transform="translate(0 8)"><defs><clipPath id="k2"><circle cx="32" cy="32" r="27"></circle></clipPath></defs><circle cx="32" cy="32" r="30.4" fill="none" stroke="#D7A667" stroke-width="2"></circle><g clip-path="url(#k2)"><path d="M0 40 C14 40 22 30 34 28 C46 26 54 34 64 36 V70 H0Z" fill="#456887" stroke="#26405F" stroke-width="1.5" stroke-linejoin="round"></path><path d="M0 44 C6 37 12 33 20 34 C32 36 38 47 50 47 C56 47 60 45 64 44 V70 H0Z" fill="#7F9DB8" stroke="#26405F" stroke-width="1.5" stroke-linejoin="round"></path><path d="M0 53 C14 53 22 47 36 47 C48 47 54 53 64 51 V70 H0Z" fill="#B4C8D6" stroke="#26405F" stroke-width="1.5" stroke-linejoin="round"></path><circle cx="44" cy="17" r="3.2" fill="#D7A667"></circle></g></g><text x="84" y="47" font-family="Jost,sans-serif" font-size="22" letter-spacing="6.5" fill="#F4F2ED"><tspan font-weight="500">SAMGORI</tspan><tspan font-weight="400" fill="#D7A667" dx="14">SOLUTIONS</tspan></text></svg><span class="foot-rule" aria-hidden="true"></span><nav class="foot-nav" aria-label="Footer"><a href="/">Home</a><a href="/services.html">Services</a><a href="/portfolio.html">Portfolio</a><a href="/field-notes/">Field Notes</a><a href="/about.html">About</a><a href="/about.html#contact">Contact</a><a href="/privacy.html">Privacy</a></nav><p>© 2026 Samgori Solutions. An independent consultancy, not affiliated with Oracle. NetSuite is a registered trademark of Oracle Corporation.</p><p>New York Metro Area · <a href="https://www.linkedin.com/in/maiaeliozashvili" target="_blank" rel="noopener">linkedin.com/in/maiaeliozashvili</a></p></div></footer>
+
+<script>
+(function () {
+  var links = Array.prototype.slice.call(document.querySelectorAll('.toc a'));
+  var map = {}; links.forEach(function (a) { map[a.getAttribute('href').slice(1)] = a; });
+  if ('IntersectionObserver' in window) {
+    var io = new IntersectionObserver(function (es) {
+      es.forEach(function (e) { if (e.isIntersecting) {
+        links.forEach(function (a) { a.classList.remove('on'); a.removeAttribute('aria-current'); });
+        var a = map[e.target.id]; if (a) { a.classList.add('on'); a.setAttribute('aria-current', 'true'); }
+      } });
+    }, { rootMargin: '-80px 0px -70% 0px' });
+    document.querySelectorAll('section.ch').forEach(function (s) { io.observe(s); });
+  }
+
+  var OPS = {
+    lookup:{u:1,s:0.05}, query:{u:10,s:0.4}, load_tx:{u:10,s:0.5}, load_ot:{u:5,s:0.3}, load_cu:{u:2,s:0.1}, file:{u:10,s:0.3},
+    sub_tx:{u:10,s:0.5}, sub_ot:{u:5,s:0.25}, sub_cu:{u:2,s:0.1}, save_tx:{u:20,s:1},
+    save_ot:{u:10,s:0.5}, save_cu:{u:4,s:0.2}, https:{u:10,s:0.8}, email:{u:20,s:0.3}
+  };
+  var OPLABEL = {lookup:'lookupFields', query:'Search or SuiteQL query', load_tx:'record.load · transaction', load_ot:'record.load · customer, contact, employee, item', load_cu:'record.load · custom record', file:'file.load',
+    sub_tx:'submitFields · transaction', sub_ot:'submitFields · customer, contact, employee, item', sub_cu:'submitFields · custom record',
+    save_tx:'record.save · transaction', save_ot:'record.save · customer, contact, employee, item', save_cu:'record.save · custom record', https:'https.request', email:'email.send'};
+  var CLS = {tx:'transaction', ot:'other record', cu:'custom record'};
+  var READ = {saved:{fu:15,fs:0.5,pu:0.005,ps:0.002,n:'Saved search read'}, script:{fu:10,fs:0.5,pu:0.005,ps:0.002,n:'Search built in the script'}, suiteql:{fu:10,fs:0.5,pu:0.01,ps:0.002,n:'SuiteQL read'}};
+  var rows = [];
+  function r2(n) { return Math.round(n * 100) / 100; }
+  function r3(n) { return Math.round(n * 1000) / 1000; }
+  function mk(tag, attrs, kids) {
+    var e = document.createElement(tag);
+    Object.keys(attrs || {}).forEach(function (k) { if (k === 'text') e.textContent = attrs[k]; else e.setAttribute(k, attrs[k]); });
+    (kids || []).forEach(function (c) { e.appendChild(c); });
+    return e;
+  }
+  function field(label, control) { var d = mk('div'); d.appendChild(mk('label', { text: label })); d.appendChild(control); return d; }
+    function opSelect(val) {
+    var s = mk('select');
+    s.innerHTML = '<optgroup label="Reads"><option value="lookup">lookupFields · a few fields (1)</option><option value="query">Search or SuiteQL query (10)</option><option value="load_tx">record.load · transaction (10)</option><option value="load_ot">record.load · customer, contact, employee, item (5)</option><option value="load_cu">record.load · custom record (2)</option><option value="file">file.load (10)</option></optgroup><optgroup label="Writes"><option value="sub_tx">submitFields · transaction (10)</option><option value="sub_ot">submitFields · customer, contact, employee, item (5)</option><option value="sub_cu">submitFields · custom record (2)</option><option value="save_tx">record.save · transaction (20)</option><option value="save_ot">record.save · customer, contact, employee, item (10)</option><option value="save_cu">record.save · custom record (4)</option></optgroup><optgroup label="Other"><option value="https">https.request (10)</option><option value="email">email.send (20)</option></optgroup>';
+    s.value = val; return s;
+  }
+  function renderRows() {
+    var box = el('b-rows'); box.innerHTML = '';
+    rows.forEach(function (r, i) {
+      var name = mk('input', { type: 'text', 'aria-label': 'What it looks up', placeholder: 'What it looks up' }); name.value = r.label;
+      var op = opSelect(r.op); op.setAttribute('aria-label', 'Operation');
+      var times = mk('input', { type: 'number', min: '0', step: '1', 'aria-label': 'Times per record' }); times.value = r.times;
+      var run = mk('select', { 'aria-label': 'When it runs' }); run.innerHTML = '<option value="per">Per record</option><option value="call">Once per call</option>'; run.value = r.run;
+      var x = mk('button', { type: 'button', 'class': 'x', 'aria-label': 'Remove this lookup', text: '×' });
+      name.addEventListener('input', function () { r.label = name.value; build(); });
+      op.addEventListener('change', function () { r.op = op.value; build(); });
+      times.addEventListener('input', function () { r.times = parseFloat(times.value) || 0; build(); });
+      run.addEventListener('change', function () { r.run = run.value; build(); });
+      x.addEventListener('click', function () { rows.splice(i, 1); renderRows(); build(); });
+      var row = mk('div', { 'class': 'brow' }, [field('Lookup', name), field('Operation', op), field('Times', times), field('Runs', run), x]);
+      box.appendChild(row);
+    });
+  }
+  function build() {
+    var cls = el('b-prim').value, rd = READ[el('b-read').value], act = el('b-act').value, out = el('b-out').value;
+    var base = parseFloat(el('b-base').value) || 0;
+    var steps = [];
+    steps.push({ n: rd.n + ', up to 1,000 rows a page', where: 'call', u: rd.fu, s: rd.fs });
+    steps.push({ n: 'Reading each row from the results', where: 'record', u: rd.pu, s: rd.ps });
+    if (base > 0) steps.push({ n: 'Building the payload', where: 'record', u: 0, s: base });
+    var L = { tx: 10, ot: 5, cu: 2 }, S = { tx: 20, ot: 10, cu: 4 }, Ls = { tx: 0.5, ot: 0.3, cu: 0.1 }, Ss = { tx: 1, ot: 0.5, cu: 0.2 }, Us = { tx: 0.5, ot: 0.25, cu: 0.1 };
+    if (act === 'submit') steps.push({ n: 'submitFields on the ' + CLS[cls], where: 'record', u: L[cls], s: Us[cls] });
+    if (act === 'load') steps.push({ n: 'record.load on the ' + CLS[cls], where: 'record', u: L[cls], s: Ls[cls] });
+    if (act === 'loadsave') steps.push({ n: 'record.load and save on the ' + CLS[cls], where: 'record', u: L[cls] + S[cls], s: Ls[cls] + Ss[cls] });
+    if (act === 'delete') steps.push({ n: 'record.delete on the ' + CLS[cls], where: 'record', u: S[cls], s: Ss[cls] });
+    if (out === 'batch') steps.push({ n: 'https.request with the whole batch', where: 'call', u: 10, s: 0.8 });
+    if (out === 'record') steps.push({ n: 'https.request for each record', where: 'record', u: 10, s: 0.8 });
+    rows.forEach(function (r) {
+      var o = OPS[r.op], t = r.times;
+      steps.push({ n: (r.label || OPLABEL[r.op]) + (t !== 1 ? ' × ' + t : ''), op: r.op, where: r.run === 'call' ? 'call' : 'record', u: o.u * t, s: o.s * t, row: r });
+    });
+    var fu = 0, fs = 1, pu = 0, ps = 0;
+    steps.forEach(function (s) { if (s.where === 'call') { fu += s.u; fs += s.s; } else { pu += s.u; ps += s.s; } });
+    var body = el('b-body'); body.innerHTML = '';
+    steps.forEach(function (s) {
+      var tr = mk('tr', {}, [mk('td', { text: s.n }), mk('td', { text: s.where === 'call' ? 'Once per call' : 'Per record' }), mk('td', { 'class': 'num', text: String(r3(s.u)) }), mk('td', { 'class': 'num', text: String(r3(s.s)) }),
+        mk('td', { 'class': 'num', text: s.where === 'record' && pu > 0 && s.u > 0 ? (s.u / pu < 0.01 ? '<1%' : Math.round(s.u / pu * 100) + '%') : '—' })]);
+      body.appendChild(tr);
+    });
+    body.appendChild(mk('tr', { 'class': 'bld-tot' }, [mk('td', { text: 'Fixed per call (adds 1 s for the call itself)' }), mk('td', { text: 'Once per call' }), mk('td', { 'class': 'num', text: String(r3(fu)) }), mk('td', { 'class': 'num', text: String(r3(fs)) }), mk('td')]));
+    body.appendChild(mk('tr', { 'class': 'bld-tot' }, [mk('td', { text: 'Per record' }), mk('td', { text: 'Per record' }), mk('td', { 'class': 'num', text: String(r3(pu)) }), mk('td', { 'class': 'num', text: String(r3(ps)) }), mk('td')]));
+    var hints = el('b-hints'); hints.innerHTML = '';
+    steps.forEach(function (s) {
+      var big = s.row && s.where === 'record' && s.u >= 5 && (s.op === 'query' || s.op.indexOf('load_') === 0);
+      if (big) {
+        var save = s.u, after = pu - save;
+        hints.appendChild(mk('p', { 'class': 'hint', text: '“' + (s.row.label || OPLABEL[s.row.op]) + '” costs ' + r3(save) + ' units for every record. Fetch it once per call with one query and look the results up in memory: per-record units fall from ' + r3(pu) + ' to ' + r3(after) + ', and the fixed cost rises by 10.' }));
+      }
+    });
+    el('c-fixed').value = Math.round(fu); el('c-fsec').value = r2(fs); el('c-per').value = r2(pu); el('c-sec').value = r3(ps);
+    calc();
+  }
+
+  var PRESETS = {
+    opp: { type: '5000|300', budget: 5000, reserve: 500, tlimit: 300, kb: 2, day: 2400, peak: 20, lat: 60, backlog: 1500, int: 0,
+      b: { prim: 'tx', read: 'saved', act: 'submit', out: 'batch', base: 0.05, rows: [
+        { label: 'Customer fields on the opportunity', op: 'lookup', times: 1, run: 'per' },
+        { label: 'Contacts on the customer, to find the billing role', op: 'query', times: 1, run: 'per' },
+        { label: 'Billing contact name and email', op: 'lookup', times: 1, run: 'per' }] } },
+    oppbulk: { type: '5000|300', budget: 5000, reserve: 500, tlimit: 300, kb: 2, day: 2400, peak: 20, lat: 60, backlog: 1500, int: 0,
+      b: { prim: 'tx', read: 'saved', act: 'submit', out: 'batch', base: 0.05, rows: [
+        { label: 'Customer fields on the opportunity', op: 'lookup', times: 1, run: 'per' },
+        { label: 'Contacts for every customer in the batch, billing role only', op: 'query', times: 1, run: 'call' },
+        { label: 'Billing contact name and email', op: 'lookup', times: 1, run: 'per' }] } },
+    cust: { type: '5000|300', budget: 5000, reserve: 500, tlimit: 300, kb: 1, day: 2700, peak: 15, lat: 60, backlog: 2000, int: 10,
+      b: { prim: 'ot', read: 'saved', act: 'submit', out: 'batch', base: 0.5, rows: [] } },
+    blank: { type: '5000|300', budget: 5000, reserve: 500, tlimit: 300, kb: 2, day: 1000, peak: 20, lat: 60, backlog: 1000, int: 0,
+      b: { prim: 'tx', read: 'saved', act: 'none', out: 'none', base: 0.05, rows: [] } }
+  };
+  var ids = ['budget','reserve','tlimit','fixed','fsec','per','sec','kb','day','peak','lat','backlog','int'];
+  var presetIds = ['budget','reserve','tlimit','kb','day','peak','lat','backlog','int'];
+  function el(id) { return document.getElementById(id); }
+  function num(id) { var v = parseFloat(el('c-' + id).value); return isNaN(v) ? 0 : v; }
+  function fmt(n) { return isFinite(n) ? Math.round(n).toLocaleString('en-US') : '—'; }
+  function dur(min) {
+    if (!isFinite(min)) return 'never';
+    if (min < 60) return Math.ceil(min) + ' min';
+    var h = Math.floor(min / 60), m = Math.round(min % 60);
+    if (h >= 48) return (min / 1440).toFixed(1) + ' days';
+    return h + ' h' + (m ? ' ' + m + ' m' : '');
+  }
+  function load(p) {
+    var s = PRESETS[p], b = s.b;
+    el('c-type').value = s.type;
+    presetIds.forEach(function (k) { el('c-' + k).value = s[k]; });
+    el('b-prim').value = b.prim; el('b-read').value = b.read; el('b-act').value = b.act; el('b-out').value = b.out; el('b-base').value = b.base;
+    rows = b.rows.map(function (r) { return { label: r.label, op: r.op, times: r.times, run: r.run }; });
+    renderRows();
+    document.querySelectorAll('.presets .seg').forEach(function (x) { x.classList.toggle('on', x.getAttribute('data-preset') === p); });
+    build();
+  }
+  function calc() {
+    var budget = num('budget'), reserve = num('reserve'), tl = num('tlimit'), fixed = num('fixed'), per = num('per');
+    var sec = num('sec'), kb = num('kb'), day = num('day'), peak = num('peak') / 100, lat = num('lat'), backlog = num('backlog'), cur = num('int');
+    var bu = per > 0 ? Math.floor((budget - fixed - reserve) / per) : Infinity;
+    var fsec = num('fsec');
+    var bt = sec > 0 ? Math.max(0, Math.floor((tl * 0.5 - fsec) / sec)) : Infinity;
+    var bp = kb > 0 ? Math.floor(5120 / kb) : Infinity;
+    var ceilings = [['units', bu], ['time', bt], ['search page', 1000], ['payload', bp]];
+    ceilings.sort(function (a, b) { return a[1] - b[1]; });
+    var batch = Math.max(0, ceilings[0][1]);
+    el('o-batch').textContent = fmt(batch);
+    el('o-bind').textContent = batch > 0 ? 'Set by the ' + ceilings[0][0] + ' ceiling' : 'The fixed cost and reserve use the whole budget';
+    el('o-bu').textContent = fmt(bu); el('o-bt').textContent = fmt(bt); el('o-bp').textContent = fmt(bp);
+    el('o-used').textContent = fmt(fixed + per * batch) + ' of ' + fmt(budget);
+    var peakHour = day * peak;
+    var cph = batch > 0 ? Math.max(1, Math.ceil(peakHour / batch)) : Infinity;
+    el('o-cph').textContent = fmt(cph);
+    var interval = Math.min(60 / cph, lat);
+    el('o-int').textContent = dur(interval);
+    el('o-cpd').textContent = fmt(1440 / interval);
+    var arrivalsPerInterval = peakHour * interval / 60;
+    var cap = batch - arrivalsPerInterval;
+    el('o-drain').textContent = cap > 0 ? dur(Math.ceil(backlog / cap) * interval) : 'never at peak';
+    var today = cur > 0 ? batch * (1440 / cur) : NaN;
+    el('o-today').textContent = cur > 0 ? fmt(today) + ' / day' : 'new design';
+    var v = el('o-verdict'), warn = false, msg;
+    if (batch <= 0) { warn = true; msg = 'This design cannot run as one call. Cut the fixed cost or move the work to map/reduce.'; }
+    else if (cur > 0 && cur > interval) { warn = true; msg = 'The interval in use (' + dur(cur) + ') is longer than the longest safe interval (' + dur(interval) + '). At today\'s interval the calls handle about ' + fmt(today) + ' records a day against ' + fmt(day) + ' arriving. Shorten the interval before you touch the batch size.'; }
+    else if (cap <= 0) { warn = true; msg = 'At peak, more records arrive per interval than one batch can carry, so the backlog never clears. Shorten the interval or lower the per-record cost.'; }
+    else { msg = 'A batch of ' + fmt(batch) + ' every ' + dur(interval) + ' clears peak volume, meets the freshness target and uses ' + Math.round((fixed + per * batch) / budget * 100) + '% of the budget.'; }
+    v.textContent = msg; v.classList.toggle('warn', warn);
+  }
+  document.querySelectorAll('.presets .seg').forEach(function (b) { b.addEventListener('click', function () { load(b.getAttribute('data-preset')); }); });
+  el('c-type').addEventListener('change', function () {
+    var p = el('c-type').value.split('|'); el('c-budget').value = p[0]; el('c-tlimit').value = p[1]; el('c-reserve').value = Math.round(p[0] * 0.1); calc();
+  });
+  ids.forEach(function (k) { el('c-' + k).addEventListener('input', calc); });
+  ['b-prim','b-read','b-act','b-out'].forEach(function (k) { el(k).addEventListener('change', build); });
+  el('b-base').addEventListener('input', build);
+  el('b-add').addEventListener('click', function () { rows.push({ label: '', op: 'lookup', times: 1, run: 'per' }); renderRows(); build(); });
+  load('opp');
+})();
+</script>
+
+</body></html>
